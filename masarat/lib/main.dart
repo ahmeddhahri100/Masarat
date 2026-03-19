@@ -1,122 +1,129 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:masarat/core/theme/app_theme.dart';
+import 'package:masarat/l10n/app_localizations.dart';
+import 'package:masarat/routes/app_router.dart';
+import 'package:masarat/services/storage_service.dart';
+import 'package:masarat/services/supabase_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Initialize services
+  await _initializeServices();
+
+  runApp(
+    const ProviderScope(
+      child: MasaratApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+Future<void> _initializeServices() async {
+  // Initialize storage service
+  await StorageService.instance.init();
 
-  // This widget is the root of your application.
+  // Initialize Supabase
+  await SupabaseService.instance.initialize();
+}
+
+class MasaratApp extends ConsumerStatefulWidget {
+  const MasaratApp({super.key});
+
+  @override
+  ConsumerState<MasaratApp> createState() => _MasaratAppState();
+}
+
+class _MasaratAppState extends ConsumerState<MasaratApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
+    final router = ref.watch(goRouterProvider);
+    final storageService = StorageService.instance;
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+    // Get saved theme mode
+    final savedThemeMode = storageService.getThemeMode();
+    final themeMode = _getThemeMode(savedThemeMode);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+    // Get saved language code
+    final savedLanguageCode = storageService.getLanguageCode();
+    final locale = savedLanguageCode != null
+        ? Locale(savedLanguageCode)
+        : const Locale('en', 'US');
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+    return MaterialApp.router(
+      title: 'Masarat',
+      debugShowCheckedModeBanner: false,
 
-  final String title;
+      // Theme Configuration
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+      // Localization Configuration
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      localeListResolutionCallback: AppLocalizations.localeResolutionCallback,
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+      // Router Configuration
+      routerConfig: router,
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+      // Builder for additional setup
+      builder: (context, child) {
+        // Set system UI overlay style based on theme
+        final brightness = Theme.of(context).brightness;
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                brightness == Brightness.light ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor:
+                brightness == Brightness.light ? Colors.white : const Color(0xFF1E1E1E),
+            systemNavigationBarIconBrightness:
+                brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+        );
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+        // Handle text direction for RTL languages
+        final textDirection = AppLocalizations.of(context)?.textDirection ?? TextDirection.ltr;
+
+        return Directionality(
+          textDirection: textDirection,
+          child: MediaQuery(
+            // Ensure text scaling doesn't break the UI
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(
+                MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.3),
+              ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
     );
+  }
+
+  ThemeMode _getThemeMode(String mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
   }
 }
