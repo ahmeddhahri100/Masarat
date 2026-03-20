@@ -24,7 +24,10 @@ class SettingsScreen extends StatelessWidget {
           _SettingsTile(title: 'Privacy Policy'),
           const SizedBox(height: 48),
           Center(
-            child: Text('Masarat Version 1.0.0 (MVP)', style: MasaratTypography.labelMedium.copyWith(fontSize: 10)),
+            child: Text(
+              'Masarat Version 1.0.0 (MVP)',
+              style: MasaratTypography.labelMedium.copyWith(fontSize: 10),
+            ),
           ),
         ],
       ),
@@ -42,8 +45,13 @@ class _SettingsToggle extends StatelessWidget {
     return SwitchListTile(
       value: value,
       onChanged: (v) {},
-      title: Text(title, style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-      activeColor: MasaratColors.primary,
+      title: Text(
+        title,
+        style: MasaratTypography.bodyMedium.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      activeThumbColor: MasaratColors.primary,
       contentPadding: EdgeInsets.zero,
     );
   }
@@ -56,7 +64,12 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      title: Text(title, style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+      title: Text(
+        title,
+        style: MasaratTypography.bodyMedium.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       trailing: const Icon(Icons.chevron_right, size: 16),
       onTap: () {},
       contentPadding: EdgeInsets.zero,

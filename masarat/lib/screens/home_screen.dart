@@ -10,78 +10,187 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MasaratColors.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24.0),
+        child: CustomScrollView(
+          slivers: [
+            // Header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Marhaba, Ahmed', style: MasaratTypography.labelMedium),
-                        Text('Explore Trips', style: MasaratTypography.headlineMedium),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Marhaba, Ahmed 👋',
+                            style: MasaratTypography.labelMedium.copyWith(
+                              color: MasaratColors.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Explore Trips',
+                              style: MasaratTypography.headlineMedium),
+                        ],
+                      ),
                     ),
-                    const CircleAvatar(
-                      backgroundColor: MasaratColors.secondaryFixed,
-                      child: Icon(Icons.person_outline, color: MasaratColors.primary),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: MasaratColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.person_rounded,
+                          color: Colors.white, size: 20),
                     ),
                   ],
                 ),
               ),
-              
-              // Featured Trips (Horizontal)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Text('Featured Trips', style: MasaratTypography.headlineMedium.copyWith(fontSize: 18)),
+            ),
+
+            // Search bar
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: MasaratColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      const Icon(Icons.search_rounded,
+                          color: MasaratColors.onSurfaceVariant, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Search trips...',
+                        style: MasaratTypography.bodyMedium.copyWith(
+                          color: MasaratColors.onSurfaceVariant.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 200,
+            ),
+
+            // Featured / Boosted Trips section
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Boosted Trips',
+                        style: MasaratTypography.titleMedium),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        'See all',
+                        style: MasaratTypography.labelMedium.copyWith(
+                          color: MasaratColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 180,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(left: 24),
+                  padding: const EdgeInsets.only(left: 24, top: 12),
                   itemCount: 3,
                   itemBuilder: (context, index) => const FeaturedTripCard(),
                 ),
               ),
-              
-              const SizedBox(height: 32),
-              
-              // Active Feed
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Text('Shared Journeys', style: MasaratTypography.headlineMedium.copyWith(fontSize: 18)),
+            ),
+
+            // Recent / Shared Journeys
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Recent Trips',
+                        style: MasaratTypography.titleMedium),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        'See all',
+                        style: MasaratTypography.labelMedium.copyWith(
+                          color: MasaratColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 5,
-                itemBuilder: (context, index) => const TripCard(),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => const TripCard(),
+                  childCount: 5,
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        selectedItemColor: MasaratColors.primary,
-        unselectedItemColor: MasaratColors.onSurface.withOpacity(0.4),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Post'),
-          BottomNavigationBarItem(icon: Icon(Icons.message_outlined), label: 'Messages'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+      bottomNavigationBar: _MasaratBottomNav(currentIndex: 0, onTap: (_) {}),
+    );
+  }
+}
+
+class _MasaratBottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  const _MasaratBottomNav({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: MasaratColors.surfaceContainerLowest,
+        boxShadow: [
+          BoxShadow(
+            color: MasaratColors.onSurface.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
         ],
+      ),
+      child: SafeArea(
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: onTap,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(
+                icon: Icon(Icons.home_rounded), label: 'Home'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.search_rounded), label: 'Search'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.add_circle_rounded), label: 'Create'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.chat_bubble_rounded), label: 'Messages'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }

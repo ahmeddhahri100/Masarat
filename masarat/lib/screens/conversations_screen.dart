@@ -9,17 +9,49 @@ class ConversationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
-      body: ListView.separated(
+      backgroundColor: MasaratColors.surface,
+      appBar: AppBar(
+        title: const Text('Messages'),
+      ),
+      body: ListView(
         padding: const EdgeInsets.all(24),
-        itemCount: 3,
-        separatorBuilder: (context, index) => const SizedBox(height: 16),
-        itemBuilder: (context, index) => _ConversationItem(
-          name: index == 0 ? 'Sami Rebai' : 'Fatma B.',
-          lastMessage: index == 0 ? 'I will be at the TGM station at 8.' : 'Request accepted!',
-          time: '14:20',
-          isUnread: index == 0,
-        ),
+        children: [
+          _ConversationItem(
+            name: 'Sami Rebai',
+            lastMessage: 'I will be at the TGM station at 8.',
+            time: '14:20',
+            isUnread: true,
+            tripRoute: 'Tunis → Hammamet',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ConversationItem(
+            name: 'Fatma B.',
+            lastMessage: 'Request accepted! See you tomorrow.',
+            time: '13:05',
+            isUnread: false,
+            tripRoute: 'Ariana → Sousse',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ConversationItem(
+            name: 'Mohamed K.',
+            lastMessage: 'Thanks for the ride!',
+            time: 'Yesterday',
+            isUnread: false,
+            tripRoute: 'Bizerte → Tunis',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -30,54 +62,107 @@ class _ConversationItem extends StatelessWidget {
   final String lastMessage;
   final String time;
   final bool isUnread;
+  final String tripRoute;
+  final VoidCallback onTap;
 
-  const _ConversationItem({required this.name, required this.lastMessage, required this.time, this.isUnread = false});
+  const _ConversationItem({
+    required this.name,
+    required this.lastMessage,
+    required this.time,
+    required this.isUnread,
+    required this.tripRoute,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen())),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isUnread ? MasaratColors.surfaceContainerLow : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            const CircleAvatar(radius: 24, backgroundColor: MasaratColors.secondaryFixed),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(
-                    lastMessage,
-                    style: MasaratTypography.labelMedium.copyWith(
-                      color: isUnread ? MasaratColors.onSurface : MasaratColors.onSurface.withOpacity(0.5),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isUnread
+                ? MasaratColors.primaryFixed.withOpacity(0.3)
+                : MasaratColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: MasaratColors.onSurface.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: isUnread
+                      ? MasaratColors.primaryGradient
+                      : const LinearGradient(
+                          colors: [MasaratColors.secondaryFixed, MasaratColors.secondaryFixed]),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.person_rounded,
+                  color:
+                      isUnread ? Colors.white : MasaratColors.onSecondaryFixed,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: MasaratTypography.labelLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      tripRoute,
+                      style: MasaratTypography.labelSmall.copyWith(
+                        color: MasaratColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lastMessage,
+                      style: MasaratTypography.bodyMedium.copyWith(
+                        color: isUnread
+                            ? MasaratColors.onSurface
+                            : MasaratColors.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(time, style: MasaratTypography.labelSmall),
+                  const SizedBox(height: 8),
+                  if (isUnread)
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: MasaratColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(time, style: MasaratTypography.labelMedium.copyWith(fontSize: 10)),
-                const SizedBox(height: 8),
-                if (isUnread)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(color: MasaratColors.primary, shape: BoxShape.circle),
-                  ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
-import '../components/status_chip.dart';
 import 'trip_requests_screen.dart';
+import 'trip_details_screen.dart';
+
+enum TripStatus { pending, accepted, cancelled }
 
 class MyTripsScreen extends StatelessWidget {
   const MyTripsScreen({super.key});
@@ -12,13 +14,11 @@ class MyTripsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: MasaratColors.surface,
         appBar: AppBar(
           title: const Text('My Trips'),
-          bottom: TabBar(
-            indicatorColor: MasaratColors.primary,
-            labelColor: MasaratColors.primary,
-            unselectedLabelColor: MasaratColors.onSurface.withOpacity(0.4),
-            tabs: const [
+          bottom: const TabBar(
+            tabs: [
               Tab(text: 'As Driver'),
               Tab(text: 'As Passenger'),
             ],
@@ -41,42 +41,75 @@ class _TripsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.all(24),
-      itemCount: 2,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _TripItem(
-        title: index == 0 ? 'Tunis → Sousse' : 'Ariana → Bizerte',
-        date: '22 Mar, 08:30 AM',
-        status: index == 0 ? TripStatus.pending : TripStatus.accepted,
-        requestCount: isDriver ? (index == 0 ? 3 : 1) : 0,
-      ),
+      children: [
+        _TripItem(
+          origin: 'Tunis',
+          destination: 'Sousse',
+          date: 'Tomorrow, 08:30 AM',
+          status: TripStatus.pending,
+          requestCount: isDriver ? 3 : 0,
+          onTap: () {
+            if (isDriver && 3 > 0) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const TripRequestsScreen()));
+            } else {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const TripDetailsScreen()));
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        _TripItem(
+          origin: 'Ariana',
+          destination: 'Bizerte',
+          date: '24 Mar, 07:00 AM',
+          status: TripStatus.accepted,
+          requestCount: isDriver ? 1 : 0,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TripDetailsScreen()),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _TripItem extends StatelessWidget {
-  final String title;
+  final String origin;
+  final String destination;
   final String date;
   final TripStatus status;
   final int requestCount;
+  final VoidCallback onTap;
 
-  const _TripItem({required this.title, required this.date, required this.status, required this.requestCount});
+  const _TripItem({
+    required this.origin,
+    required this.destination,
+    required this.date,
+    required this.status,
+    required this.requestCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        if (requestCount > 0) {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const TripRequestsScreen()));
-        }
-      },
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: MasaratColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: MasaratColors.outlineVariant.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: MasaratColors.onSurface.withOpacity(0.04),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,29 +117,93 @@ class _TripItem extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 16)),
-                StatusChip(status: status),
+                Text(
+                  '$origin → $destination',
+                  style: MasaratTypography.headlineSmall,
+                ),
+                _StatusChip(status: status),
               ],
             ),
             const SizedBox(height: 8),
-            Text(date, style: MasaratTypography.labelMedium),
+            Row(
+              children: [
+                const Icon(Icons.schedule_rounded,
+                    size: 14, color: MasaratColors.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text(date, style: MasaratTypography.labelSmall),
+              ],
+            ),
             if (requestCount > 0) ...[
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: MasaratColors.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: MasaratColors.primaryFixed.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.people_outline, size: 16, color: MasaratColors.primary),
+                    const Icon(Icons.people_outline_rounded,
+                        size: 16, color: MasaratColors.primary),
                     const SizedBox(width: 8),
-                    Text('$requestCount new seat requests', style: MasaratTypography.labelMedium.copyWith(color: MasaratColors.primary, fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    const Icon(Icons.chevron_right, size: 16, color: MasaratColors.primary),
+                    Expanded(
+                      child: Text(
+                        '$requestCount new seat request${requestCount > 1 ? 's' : ''}',
+                        style: MasaratTypography.labelLarge.copyWith(
+                          color: MasaratColors.primary,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: MasaratColors.primary),
                   ],
                 ),
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final TripStatus status;
+  const _StatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bgColor;
+    final Color textColor;
+    final String label;
+    switch (status) {
+      case TripStatus.pending:
+        bgColor = MasaratColors.secondaryFixed;
+        textColor = MasaratColors.onSecondaryFixed;
+        label = 'Pending';
+        break;
+      case TripStatus.accepted:
+        bgColor = MasaratColors.primaryFixed;
+        textColor = MasaratColors.primary;
+        label = 'Active';
+        break;
+      case TripStatus.cancelled:
+        bgColor = MasaratColors.tertiaryFixed;
+        textColor = MasaratColors.onTertiaryFixed;
+        label = 'Cancelled';
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: MasaratTypography.labelSmall.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
