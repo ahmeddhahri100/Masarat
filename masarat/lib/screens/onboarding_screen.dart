@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
+import '../core/theme/typography.dart';
 import '../core/constants/app_strings.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -13,122 +14,176 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingData> _pages = [
-    OnboardingData(
+  final List<_OnboardingData> _pages = [
+    _OnboardingData(
       title: AppStrings.welcomeTitle,
       description: AppStrings.onboarding1,
-      image: 'assets/onboarding1.png', // Placeholder
+      icon: Icons.commute_rounded,
     ),
-    OnboardingData(
+    _OnboardingData(
       title: 'Trusted Community',
       description: AppStrings.onboarding2,
-      image: 'assets/onboarding2.png', // Placeholder
+      icon: Icons.people_alt_rounded,
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) => setState(() => _currentPage = index),
-            itemCount: _pages.length,
-            itemBuilder: (context, index) => _OnboardingPage(data: _pages[index]),
-          ),
-          Positioned(
-            bottom: 40,
-            left: 24,
-            right: 24,
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    _pages.length,
-                    (index) => Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == index ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == index 
-                            ? MasaratColors.primary 
-                            : MasaratColors.outlineVariant,
-                        borderRadius: BorderRadius.circular(4),
+      backgroundColor: MasaratColors.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (index) => setState(() => _currentPage = index),
+                itemCount: _pages.length,
+                itemBuilder: (context, index) =>
+                    _OnboardingPage(data: _pages[index]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+              child: Column(
+                children: [
+                  // Page indicators
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _pages.length,
+                      (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: _currentPage == index ? 28 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _currentPage == index
+                              ? MasaratColors.primary
+                              : MasaratColors.outlineVariant,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 40),
+                  // CTA button with gradient
+                  _GradientButton(
+                    label: _currentPage == _pages.length - 1
+                        ? 'Get Started'
+                        : 'Next',
+                    onPressed: () {
+                      if (_currentPage < _pages.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
+                        );
+                      } else {
+                        // Navigate to Welcome
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingData {
+  final String title;
+  final String description;
+  final IconData icon;
+  _OnboardingData(
+      {required this.title, required this.description, required this.icon});
+}
+
+class _OnboardingPage extends StatelessWidget {
+  final _OnboardingData data;
+  const _OnboardingPage({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Spacer(),
+          // Illustration container
+          Container(
+            height: 280,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: MasaratColors.secondaryFixed,
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: MasaratColors.primaryFixed.withOpacity(0.4),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_currentPage < _pages.length - 1) {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    } else {
-                      // Navigate to Welcome/Auth
-                    }
-                  },
-                  child: Text(_currentPage == _pages.length - 1 ? 'Get Started' : 'Next'),
-                ),
+                Icon(data.icon, size: 80, color: MasaratColors.primary),
               ],
             ),
           ),
+          const SizedBox(height: 48),
+          Text(
+            data.title,
+            style: MasaratTypography.headlineLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            data.description,
+            style: MasaratTypography.bodyLarge.copyWith(
+              color: MasaratColors.onSurfaceVariant,
+              height: 1.6,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const Spacer(flex: 2),
         ],
       ),
     );
   }
 }
 
-class OnboardingData {
-  final String title;
-  final String description;
-  final String image;
-
-  OnboardingData({required this.title, required this.description, required this.image});
-}
-
-class _OnboardingPage extends StatelessWidget {
-  final OnboardingData data;
-
-  const _OnboardingPage({required this.data});
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  const _GradientButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-          // Placeholder for Illustration
-          Container(
-            height: 300,
-            decoration: BoxDecoration(
-              color: MasaratColors.secondaryFixed,
-              borderRadius: BorderRadius.circular(32),
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: MasaratColors.primaryGradient,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: MasaratColors.primary.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
-            child: const Center(child: Icon(Icons.commute, size: 100, color: MasaratColors.primary)),
-          ),
-          const SizedBox(height: 48),
-          Text(
-            data.title,
-            style: Theme.of(context).textTheme.headlineLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            data.description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: MasaratColors.onSurface.withOpacity(0.7),
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(flex: 2),
-        ],
+          ],
+        ),
+        child: Center(
+          child: Text(label, style: MasaratTypography.buttonText),
+        ),
       ),
     );
   }

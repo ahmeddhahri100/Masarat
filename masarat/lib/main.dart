@@ -25,6 +25,13 @@ class MasaratApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Masarat',
+      theme: MasaratTheme.lightTheme,
+      home: const HomeScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+/*
     return ClerkAuth(
       config: ClerkAuthConfig(publishableKey: ClerkService.publishableKey),
       child: ClerkAuthBuilder(
@@ -42,5 +49,6 @@ class MasaratApp extends StatelessWidget {
         ),
       ),
     );
+*/
   }
 }

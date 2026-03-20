@@ -12,40 +12,58 @@ class CreateTripScreen extends StatefulWidget {
 class _CreateTripScreenState extends State<CreateTripScreen> {
   final _departureController = TextEditingController();
   final _destinationController = TextEditingController();
-  final _seatsController = TextEditingController(text: '3');
+  int _seats = 3;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MasaratColors.surface,
       appBar: AppBar(title: const Text('Post a Shared Trip')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Where are you going?', style: MasaratTypography.headlineMedium.copyWith(fontSize: 20)),
+            Text('Where are you going?',
+                style: MasaratTypography.headlineSmall),
             const SizedBox(height: 24),
-            _buildLocationField(
-              label: 'Departure City',
+
+            // Route fields
+            TextField(
               controller: _departureController,
-              icon: Icons.circle_outlined,
+              decoration: const InputDecoration(
+                labelText: 'Departure City',
+                hintText: 'e.g. Tunis',
+                prefixIcon: Icon(Icons.radio_button_checked_rounded,
+                    color: MasaratColors.primary, size: 18),
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildLocationField(
-              label: 'Destination City',
+            const SizedBox(height: 12),
+            TextField(
               controller: _destinationController,
-              icon: Icons.location_on_outlined,
+              decoration: const InputDecoration(
+                labelText: 'Destination City',
+                hintText: 'e.g. Sousse',
+                prefixIcon: Icon(Icons.location_on_rounded,
+                    color: MasaratColors.primary, size: 18),
+              ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
+
+            // Date & Time row
+            Text('Date & Time', style: MasaratTypography.titleMedium),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: _buildPickerField(
+                  child: _PickerCard(
+                    icon: Icons.calendar_today_rounded,
                     label: 'Date',
-                    value: _selectedDate == null ? 'Select' : '${_selectedDate!.day}/${_selectedDate!.month}',
-                    icon: Icons.calendar_today_outlined,
+                    value: _selectedDate == null
+                        ? 'Select'
+                        : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
@@ -57,69 +75,100 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: _buildPickerField(
+                  child: _PickerCard(
+                    icon: Icons.access_time_rounded,
                     label: 'Time',
-                    value: _selectedTime == null ? 'Select' : _selectedTime!.format(context),
-                    icon: Icons.access_time,
+                    value: _selectedTime == null
+                        ? 'Select'
+                        : _selectedTime!.format(context),
                     onTap: () async {
-                      final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                      final time = await showTimePicker(
+                          context: context, initialTime: TimeOfDay.now());
                       if (time != null) setState(() => _selectedTime = time);
                     },
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 32),
-            Text('Available Seats', style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _seatButton(Icons.remove, () {
-                  int val = int.parse(_seatsController.text);
-                  if (val > 1) setState(() => _seatsController.text = (val - 1).toString());
-                }),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Text(_seatsController.text, style: MasaratTypography.headlineMedium),
-                ),
-                _seatButton(Icons.add, () {
-                  int val = int.parse(_seatsController.text);
-                  if (val < 4) setState(() => _seatsController.text = (val + 1).toString());
-                }),
-              ],
+            const SizedBox(height: 28),
+
+            // Seats stepper
+            Text('Available Seats', style: MasaratTypography.titleMedium),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: MasaratColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _StepperButton(
+                    icon: Icons.remove_rounded,
+                    onTap: () {
+                      if (_seats > 1) setState(() => _seats--);
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$_seats',
+                          style: MasaratTypography.headlineLarge,
+                        ),
+                        Text('seats', style: MasaratTypography.labelSmall),
+                      ],
+                    ),
+                  ),
+                  _StepperButton(
+                    icon: Icons.add_rounded,
+                    onTap: () {
+                      if (_seats < 4) setState(() => _seats++);
+                    },
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 48),
-            ElevatedButton(
-              onPressed: () {
-                // Check Posting Limit
-                // If limit reached -> Show Limit Reached Modal
-                // Else -> Publish Trip
-              },
-              child: const Text('Publish Trip'),
-            ),
+
+            // CTA
+            _GradientButton(label: 'Publish Trip', onPressed: _publishTrip),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationField({required String label, required TextEditingController controller, required IconData icon}) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: MasaratColors.primary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-        filled: true,
-        fillColor: MasaratColors.surfaceContainerLow,
-      ),
-    );
+  void _publishTrip() {
+    // Check posting limit → publish
   }
 
-  Widget _buildPickerField({required String label, required String value, required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
+  @override
+  void dispose() {
+    _departureController.dispose();
+    _destinationController.dispose();
+    super.dispose();
+  }
+}
+
+class _PickerCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  const _PickerCard(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -130,13 +179,20 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: MasaratTypography.labelMedium),
-            const SizedBox(height: 4),
+            Text(label, style: MasaratTypography.labelSmall),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Icon(icon, size: 16, color: MasaratColors.primary),
                 const SizedBox(width: 8),
-                Text(value, style: MasaratTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  value,
+                  style: MasaratTypography.labelLarge.copyWith(
+                    color: value == 'Select'
+                        ? MasaratColors.onSurfaceVariant
+                        : MasaratColors.onSurface,
+                  ),
+                ),
               ],
             ),
           ],
@@ -144,17 +200,62 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       ),
     );
   }
+}
 
-  Widget _seatButton(IconData icon, VoidCallback onTap) {
-    return InkWell(
+class _StepperButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _StepperButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
+          color: MasaratColors.surfaceContainerLowest,
           shape: BoxShape.circle,
-          border: Border.all(color: MasaratColors.outlineVariant),
+          boxShadow: [
+            BoxShadow(
+              color: MasaratColors.onSurface.withOpacity(0.06),
+              blurRadius: 8,
+            ),
+          ],
         ),
-        child: Icon(icon, color: MasaratColors.primary),
+        child: Icon(icon, color: MasaratColors.primary, size: 20),
+      ),
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  const _GradientButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: MasaratColors.primaryGradient,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: MasaratColors.primary.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(label, style: MasaratTypography.buttonText),
+        ),
       ),
     );
   }

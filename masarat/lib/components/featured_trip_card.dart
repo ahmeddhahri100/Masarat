@@ -8,40 +8,78 @@ class FeaturedTripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
+      width: 240,
       margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: MasaratColors.primary,
-        borderRadius: BorderRadius.circular(32),
-        gradient: MasaratColors.primaryGradient,
+        gradient: MasaratColors.heroGradient,
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text('FEATURED', style: MasaratTypography.labelMedium.copyWith(color: Colors.white)),
+          // Background pattern (subtle)
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                shape: BoxShape.circle,
               ),
-              const Spacer(),
-              const Icon(Icons.verified, color: Colors.white, size: 20),
-            ],
+            ),
           ),
-          const Spacer(),
-          Text('Tunis → Hammamet', style: MasaratTypography.headlineMedium.copyWith(color: Colors.white, fontSize: 20)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.access_time, color: Colors.white70, size: 14),
-              const SizedBox(width: 4),
-              Text('Tomorrow, 09:00 AM', style: MasaratTypography.labelMedium.copyWith(color: Colors.white70)),
-            ],
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'FEATURED',
+                        style: MasaratTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.verified, color: Colors.white, size: 18),
+                  ],
+                ),
+                const Spacer(),
+                // Route
+                Text(
+                  'Tunis → Hammamet',
+                  style: MasaratTypography.headlineSmall.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, color: Colors.white70, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tomorrow, 09:00 AM',
+                      style: MasaratTypography.labelSmall.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
