@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../core/theme/colors.dart';
-import '../core/theme/typography.dart';
-import '../components/trip_card.dart';
+import 'package:masarat/core/theme/colors.dart';
+import 'package:masarat/core/theme/typography.dart';
+import 'package:masarat/components/trip_card.dart';
 
 class SearchResultsScreen extends StatelessWidget {
   final String query;
@@ -71,7 +71,7 @@ class _FilterChip extends StatelessWidget {
       child: Text(
         label,
         style: MasaratTypography.labelSmall.copyWith(
-          color: isSelected ? Colors.white : MasaratColors.onSurface Variant,
+          color: isSelected ? Colors.white : MasaratColors.onSurfaceVariant,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
