@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../core/theme/colors.dart';
-import '../core/theme/typography.dart';
+import 'package:masarat/core/theme/colors.dart';
+import 'package:masarat/core/theme/typography.dart';
 
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
