@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../core/constants/app_strings.dart';
+import 'welcome_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -79,7 +80,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           curve: Curves.easeInOut,
                         );
                       } else {
-                        // Navigate to Welcome
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const WelcomeScreen(),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -97,8 +102,11 @@ class _OnboardingData {
   final String title;
   final String description;
   final IconData icon;
-  _OnboardingData(
-      {required this.title, required this.description, required this.icon});
+  _OnboardingData({
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
 }
 
 class _OnboardingPage extends StatelessWidget {
@@ -181,9 +189,7 @@ class _GradientButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Center(
-          child: Text(label, style: MasaratTypography.buttonText),
-        ),
+        child: Center(child: Text(label, style: MasaratTypography.buttonText)),
       ),
     );
   }

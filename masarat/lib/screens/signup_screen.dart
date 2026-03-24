@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import 'home_screen.dart';
+import 'signin_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,6 +19,74 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await SupabaseService.client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'full_name': name},
+      );
+
+      if (response.user != null) {
+        debugPrint('✓ Sign in successful: ${response.user?.email}');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Account created! Welcome, $name'),
+              backgroundColor: MasaratColors.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      }
+    } on AuthException catch (e) {
+      debugPrint('✗ Sign up error: ${e.message}');
+      _showError(e.message);
+    } catch (e) {
+      debugPrint('✗ Unexpected error: $e');
+      _showError('An unexpected error occurred');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: MasaratColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +121,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: const InputDecoration(
                 labelText: 'Full Name',
                 hintText: 'Ahmed Dhahri',
-                prefixIcon: Icon(Icons.person_outline_rounded, color: MasaratColors.onSurfaceVariant),
+                prefixIcon: Icon(
+                  Icons.person_outline_rounded,
+                  color: MasaratColors.onSurfaceVariant,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -59,7 +134,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: const InputDecoration(
                 labelText: 'Email',
                 hintText: 'name@example.com',
-                prefixIcon: Icon(Icons.mail_outline_rounded, color: MasaratColors.onSurfaceVariant),
+                prefixIcon: Icon(
+                  Icons.mail_outline_rounded,
+                  color: MasaratColors.onSurfaceVariant,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -68,13 +146,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock_outline_rounded, color: MasaratColors.onSurfaceVariant),
+                prefixIcon: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: MasaratColors.onSurfaceVariant,
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: MasaratColors.onSurfaceVariant,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
@@ -87,16 +171,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
             _GradientButton(
               label: 'Create Account',
               isLoading: _isLoading,
-              onPressed: () async {
-                setState(() => _isLoading = true);
-                await Future.delayed(const Duration(seconds: 1));
-                if (mounted) setState(() => _isLoading = false);
-              },
+              onPressed: _handleSignUp,
             ),
             const SizedBox(height: 24),
             Center(
               child: GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SignInScreen()),
+                ),
                 child: RichText(
                   text: TextSpan(
                     style: MasaratTypography.bodyMedium,
@@ -133,7 +216,11 @@ class _GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
   final bool isLoading;
-  const _GradientButton({required this.label, required this.onPressed, this.isLoading = false});
+  const _GradientButton({
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +242,14 @@ class _GradientButton extends StatelessWidget {
         ),
         child: Center(
           child: isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
               : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
