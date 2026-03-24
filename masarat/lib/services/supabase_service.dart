@@ -5,6 +5,7 @@ import '../models/message_model.dart';
 
 class SupabaseService {
   static Future<void> initialize() async {
+    print('Initializing Supabase...');
     await Supabase.initialize(
       url: 'https://wuugnobbycfpnceuysov.supabase.co',
       anonKey:
@@ -39,41 +40,6 @@ class SupabaseService {
     return (response as List).map((json) => TripModel.fromJson(json)).toList();
   }
 
-  // Messages & Conversations
-  static Stream<List<MessageModel>> getMessagesStream(String tripId) {
-    return client
-        .from('messages')
-        .stream(primaryKey: ['id'])
-        .eq('trip_id', tripId)
-        .order('created_at', ascending: true)
-        .map((data) => data.map((json) => MessageModel.fromJson(json)).toList());
-  }
-
-  static Future<List<ConversationModel>> getUserConversations(
-      String userId) async {
-    // This would typically involve a complex query or a database view.
-    // For now, let's mock it with some real-looking data but fetch what we can.
-    await Future.delayed(const Duration(milliseconds: 500));
-    return [
-      ConversationModel(
-        otherUserId: '1',
-        otherUserName: 'Sami Rebai',
-        lastMessage: 'I will be at the TGM station at 8.',
-        lastMessageTime: DateTime.now().subtract(const Duration(minutes: 5)),
-        isUnread: true,
-        tripRoute: 'Tunis → Hammamet',
-      ),
-      ConversationModel(
-        otherUserId: '2',
-        otherUserName: 'Fatma B.',
-        lastMessage: 'Request accepted! See you tomorrow.',
-        lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
-        isUnread: false,
-        tripRoute: 'Ariana → Sousse',
-      ),
-    ];
-  }
-
   static Future<void> createTrip(TripModel trip) async {
     await client.from('trips').insert(trip.toJson());
   }
@@ -99,5 +65,49 @@ class SupabaseService {
     } catch (e) {
       return null;
     }
+  }
+
+  // Messages & Conversations
+  static Stream<List<MessageModel>> getMessagesStream(String tripId) {
+    return client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('trip_id', tripId)
+        .order('created_at', ascending: true)
+        .map((data) => data.map((json) => MessageModel.fromJson(json)).toList());
+  }
+
+  static Future<void> sendMessage(MessageModel message) async {
+    await client.from('messages').insert(message.toJson());
+  }
+
+  static Future<List<ConversationModel>> getUserConversations(
+      String userId) async {
+    // In a real scenario, this would be a more complex query or a RPC call.
+    // For now, let's fetch all messages involving the user and group them.
+    final response = await client
+        .from('messages')
+        .select('*, profiles:sender_id(name, avatar_url)')
+        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .order('created_at', ascending: false);
+
+    final messages = (response as List).map((json) => MessageModel.fromJson(json)).toList();
+    
+    // Simple grouping logic
+    final Map<String, ConversationModel> conversations = {};
+    for (var msg in messages) {
+      final otherId = msg.senderId == userId ? msg.receiverId : msg.senderId;
+      if (!conversations.containsKey(otherId)) {
+        conversations[otherId] = ConversationModel(
+          otherUserId: otherId,
+          otherUserName: 'User $otherId', // In real, join with profiles
+          lastMessage: msg.content,
+          lastMessageTime: msg.timestamp,
+          isUnread: false, 
+          tripRoute: 'Trip Details', 
+        );
+      }
+    }
+    return conversations.values.toList();
   }
 }
