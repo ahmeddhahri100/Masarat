@@ -1,12 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import '../models/message_model.dart';
+import 'package:uuid/uuid.dart';
 
-class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
+class ChatScreen extends StatefulWidget {
+  final String? tripId;
+  final String? otherUserId;
+  final String? otherUserName;
+  const ChatScreen({super.key, this.tripId, this.otherUserId, this.otherUserName});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final _messageController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final authState = ClerkAuth.of(context);
+    final userId = authState.session?.user.id;
+
+    if (userId == null) {
+      return const Scaffold(body: Center(child: Text('Please sign in')));
+    }
+
     return Scaffold(
       backgroundColor: MasaratColors.surface,
       appBar: AppBar(
@@ -31,9 +52,9 @@ class ChatScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sami Rebai',
+                Text(widget.otherUserName ?? 'Partner',
                     style: MasaratTypography.labelLarge),
-                Text('Trip to Hammamet',
+                Text('Trip Chat',
                     style: MasaratTypography.labelSmall.copyWith(
                       color: MasaratColors.primary,
                     )),
@@ -51,32 +72,61 @@ class ChatScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _MessageBubble(
-                  text: 'Hello! I requested a seat for your trip tomorrow.',
-                  isMe: true,
-                  time: '10:00 AM',
-                ),
-                _MessageBubble(
-                  text: 'Welcome! I will be at the TGM station at 8.',
-                  isMe: false,
-                  time: '10:05 AM',
-                ),
-                const _SystemMessage(text: 'Request accepted by Sami ✓'),
-                _MessageBubble(
-                  text: 'Perfect, see you there!',
-                  isMe: true,
-                  time: '10:07 AM',
-                ),
-              ],
-            ),
+            child: widget.tripId == null 
+              ? const Center(child: Text('No trip associated with this chat'))
+              : StreamBuilder<List<MessageModel>>(
+                stream: SupabaseService.getMessagesStream(widget.tripId!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final messages = snapshot.data ?? [];
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      return _MessageBubble(
+                        text: msg.content,
+                        isMe: msg.senderId == userId,
+                        time: '${msg.timestamp.hour}:${msg.timestamp.minute.toString().padLeft(2, '0')}',
+                      );
+                    },
+                  );
+                },
+              ),
           ),
-          const _ChatInput(),
+          _ChatInput(
+            controller: _messageController,
+            onSend: () => _sendMessage(userId),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _sendMessage(String userId) async {
+    if (_messageController.text.isEmpty || widget.tripId == null || widget.otherUserId == null) return;
+
+    final content = _messageController.text;
+    _messageController.clear();
+
+    final message = MessageModel(
+      id: const Uuid().v4(),
+      senderId: userId,
+      receiverId: widget.otherUserId!,
+      content: content,
+      timestamp: DateTime.now(),
+      tripId: widget.tripId,
+    );
+
+    await SupabaseService.sendMessage(message);
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
   }
 }
 
@@ -137,36 +187,10 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-class _SystemMessage extends StatelessWidget {
-  final String text;
-  const _SystemMessage({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: MasaratColors.primaryFixed.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            text,
-            style: MasaratTypography.labelSmall.copyWith(
-              color: MasaratColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ChatInput extends StatelessWidget {
-  const _ChatInput();
+  final TextEditingController controller;
+  final VoidCallback onSend;
+  const _ChatInput({required this.controller, required this.onSend});
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +215,7 @@ class _ChatInput extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
+                controller: controller,
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   hintStyle: MasaratTypography.bodyMedium.copyWith(
@@ -204,21 +229,24 @@ class _ChatInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: MasaratColors.primaryGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: MasaratColors.primary.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          GestureDetector(
+            onTap: onSend,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: MasaratColors.primaryGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: MasaratColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
             ),
-            child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
           ),
         ],
       ),
