@@ -30,28 +30,34 @@ class _MasaratAppState extends State<MasaratApp> {
 
   Future<void> _initSupabase() async {
     try {
-      debugPrint('DEBUG: Initializing Supabase...');
+      debugPrint('Initializing Supabase...');
       await SupabaseService.initialize();
-      setState(() => _isSupabaseInitialized = true);
-      debugPrint('DEBUG: Supabase initialized.');
+      if (mounted) {
+        setState(() => _isSupabaseInitialized = true);
+      }
+      debugPrint('Supabase initialized.');
     } catch (e) {
-      debugPrint('DEBUG: Supabase error: $e');
-      setState(() => _isSupabaseInitialized = true);
+      debugPrint('Supabase error: $e');
+      if (mounted) {
+        setState(() => _isSupabaseInitialized = true);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isSupabaseInitialized) {
-      return const MaterialApp(
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Connecting to Masarat Services...'),
+                const CircularProgressIndicator(color: Colors.deepPurple),
+                const SizedBox(height: 16),
+                const Text('Masarat: Initializing Database...', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -65,7 +71,7 @@ class _MasaratAppState extends State<MasaratApp> {
         builder: (context) {
           try {
             final auth = ClerkAuth.of(context);
-            debugPrint('DEBUG: Auth State - Session: ${auth.session}');
+            debugPrint('Auth Session: ${auth.session}');
             
             if (auth.session != null) {
               return MaterialApp(
@@ -83,10 +89,21 @@ class _MasaratAppState extends State<MasaratApp> {
               );
             }
           } catch (e) {
-             debugPrint('DEBUG: Auth Error: $e');
-             return MaterialApp(
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
               home: Scaffold(
-                body: Center(child: Text('Auth Syncing...\n$e')),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text('Syncing Identity...'),
+                      if (e.toString().contains('null'))
+                        const Text('(Waiting for Auth Service)')
+                    ],
+                  ),
+                ),
               ),
             );
           }
