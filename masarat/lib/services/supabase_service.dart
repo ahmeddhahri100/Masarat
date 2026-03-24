@@ -74,6 +74,10 @@ class SupabaseService {
     ];
   }
 
+  static Future<void> createTrip(TripModel trip) async {
+    await client.from('trips').insert(trip.toJson());
+  }
+
   static Future<List<TripModel>> searchTrips(String query) async {
     final response = await client
         .from('trips')

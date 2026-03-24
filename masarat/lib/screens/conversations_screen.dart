@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import '../models/message_model.dart';
 import 'chat_screen.dart';
 
 class ConversationsScreen extends StatelessWidget {
@@ -8,51 +11,62 @@ class ConversationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ClerkAuth.of(context);
+    final userId = authState.session?.user.id;
+
     return Scaffold(
       backgroundColor: MasaratColors.surface,
       appBar: AppBar(
-        title: const Text('Messages'),
+        backgroundColor: MasaratColors.surface,
+        elevation: 0,
+        title: Text('Messages', style: MasaratTypography.headlineSmall),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          _ConversationItem(
-            name: 'Sami Rebai',
-            lastMessage: 'I will be at the TGM station at 8.',
-            time: '14:20',
-            isUnread: true,
-            tripRoute: 'Tunis → Hammamet',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ChatScreen()),
+      body: userId == null
+          ? const Center(child: Text('Please sign in to view messages'))
+          : FutureBuilder<List<ConversationModel>>(
+              future: SupabaseService.getUserConversations(userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final conversations = snapshot.data ?? [];
+                if (conversations.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded,
+                            size: 64,
+                            color: MasaratColors.onSurfaceVariant.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        Text('No conversations yet',
+                            style: MasaratTypography.bodyLarge),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(24),
+                  itemCount: conversations.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final conv = conversations[index];
+                    return _ConversationItem(
+                      name: conv.otherUserName,
+                      lastMessage: conv.lastMessage,
+                      time: '${conv.lastMessageTime.hour}:${conv.lastMessageTime.minute.toString().padLeft(2, '0')}',
+                      isUnread: conv.isUnread,
+                      tripRoute: conv.tripRoute ?? 'Unknown Route',
+                      avatarUrl: conv.otherUserAvatar,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChatScreen()),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-          ),
-          const SizedBox(height: 12),
-          _ConversationItem(
-            name: 'Fatma B.',
-            lastMessage: 'Request accepted! See you tomorrow.',
-            time: '13:05',
-            isUnread: false,
-            tripRoute: 'Ariana → Sousse',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ChatScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ConversationItem(
-            name: 'Mohamed K.',
-            lastMessage: 'Thanks for the ride!',
-            time: 'Yesterday',
-            isUnread: false,
-            tripRoute: 'Bizerte → Tunis',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ChatScreen()),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -63,6 +77,7 @@ class _ConversationItem extends StatelessWidget {
   final String time;
   final bool isUnread;
   final String tripRoute;
+  final String? avatarUrl;
   final VoidCallback onTap;
 
   const _ConversationItem({
@@ -71,6 +86,7 @@ class _ConversationItem extends StatelessWidget {
     required this.time,
     required this.isUnread,
     required this.tripRoute,
+    this.avatarUrl,
     required this.onTap,
   });
 
@@ -105,16 +121,27 @@ class _ConversationItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: isUnread
                       ? MasaratColors.primaryGradient
-                      : const LinearGradient(
-                          colors: [MasaratColors.secondaryFixed, MasaratColors.secondaryFixed]),
+                      : const LinearGradient(colors: [
+                          MasaratColors.secondaryFixed,
+                          MasaratColors.secondaryFixed
+                        ]),
                   borderRadius: BorderRadius.circular(14),
+                  image: avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: Icon(
-                  Icons.person_rounded,
-                  color:
-                      isUnread ? Colors.white : MasaratColors.onSecondaryFixed,
-                  size: 22,
-                ),
+                child: avatarUrl == null
+                    ? Icon(
+                        Icons.person_rounded,
+                        color: isUnread
+                            ? Colors.white
+                            : MasaratColors.onSecondaryFixed,
+                        size: 22,
+                      )
+                    : null,
               ),
               const SizedBox(width: 14),
               Expanded(
