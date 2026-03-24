@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../components/trip_card.dart';
@@ -51,10 +51,12 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get current Clerk user
-    final authState = ClerkAuth.of(context);
-    final user = authState.session?.user;
-    final userName = user?.firstName ?? 'Partner';
+    // Get current Supabase user
+    final user = SupabaseService.client.auth.currentUser;
+    final userName =
+        user?.userMetadata?['full_name'] ??
+        user?.email?.split('@').first ??
+        'Partner';
 
     return SafeArea(
       child: CustomScrollView(
@@ -77,8 +79,10 @@ class _HomeBody extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text('Explore Trips',
-                            style: MasaratTypography.headlineMedium),
+                        Text(
+                          'Explore Trips',
+                          style: MasaratTypography.headlineMedium,
+                        ),
                       ],
                     ),
                   ),
@@ -88,17 +92,12 @@ class _HomeBody extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: MasaratColors.primaryGradient,
                       borderRadius: BorderRadius.circular(14),
-                      image: user?.imageUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(user!.imageUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
                     ),
-                    child: user?.imageUrl == null
-                        ? const Icon(Icons.person_rounded,
-                            color: Colors.white, size: 20)
-                        : null,
+                    child: const Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -118,8 +117,11 @@ class _HomeBody extends StatelessWidget {
                 child: Row(
                   children: [
                     const SizedBox(width: 16),
-                    const Icon(Icons.search_rounded,
-                        color: MasaratColors.onSurfaceVariant, size: 20),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: MasaratColors.onSurfaceVariant,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       'Search trips...',
@@ -140,8 +142,7 @@ class _HomeBody extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Boosted Trips',
-                      style: MasaratTypography.titleMedium),
+                  Text('Boosted Trips', style: MasaratTypography.titleMedium),
                   TextButton(
                     onPressed: () {},
                     child: Text(
@@ -163,6 +164,9 @@ class _HomeBody extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
                   }
                   final trips = snapshot.data ?? [];
                   if (trips.isEmpty) {
@@ -187,8 +191,7 @@ class _HomeBody extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Recent Trips',
-                      style: MasaratTypography.titleMedium),
+                  Text('Recent Trips', style: MasaratTypography.titleMedium),
                   TextButton(
                     onPressed: () {},
                     child: Text(
@@ -210,10 +213,38 @@ class _HomeBody extends StatelessWidget {
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
+              if (snapshot.hasError) {
+                return SliverToBoxAdapter(
+                  child: Center(child: Text('Error: ${snapshot.error}')),
+                );
+              }
               final trips = snapshot.data ?? [];
               if (trips.isEmpty) {
                 return const SliverToBoxAdapter(
-                  child: Center(child: Text('No trips found')),
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.directions_car_outlined,
+                            size: 48,
+                            color: MasaratColors.onSurfaceVariant,
+                          ),
+                          SizedBox(height: 12),
+                          Text('No trips found'),
+                          SizedBox(height: 8),
+                          Text(
+                            'Be the first to post a trip!',
+                            style: TextStyle(
+                              color: MasaratColors.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               }
               return SliverPadding(
@@ -258,17 +289,29 @@ class _MasaratBottomNav extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
+          selectedItemColor: MasaratColors.primary,
+          unselectedItemColor: MasaratColors.onSurfaceVariant,
           items: const [
             BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded), label: 'Home'),
+              icon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(Icons.search_rounded), label: 'Search'),
+              icon: Icon(Icons.search_rounded),
+              label: 'Search',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(Icons.add_circle_rounded), label: 'Create'),
+              icon: Icon(Icons.add_circle_rounded),
+              label: 'Create',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(Icons.chat_bubble_rounded), label: 'Messages'),
+              icon: Icon(Icons.chat_bubble_rounded),
+              label: 'Messages',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded), label: 'Profile'),
+              icon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
           ],
         ),
       ),

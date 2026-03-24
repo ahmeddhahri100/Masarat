@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import 'home_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -16,18 +19,53 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _obscurePassword = true;
 
   Future<void> _handleSignIn() async {
-    setState(() => _isLoading = true);
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please fill in all fields');
+      return;
     }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await SupabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        debugPrint('✓ Sign in successful: ${response.user?.email}');
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      }
+    } on AuthException catch (e) {
+      debugPrint('✗ Sign in error: ${e.message}');
+      _showError(e.message);
+    } catch (e) {
+      debugPrint('✗ Unexpected error: $e');
+      _showError('An unexpected error occurred');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: MasaratColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
@@ -63,7 +101,10 @@ class _SignInScreenState extends State<SignInScreen> {
               decoration: const InputDecoration(
                 labelText: 'Email',
                 hintText: 'name@example.com',
-                prefixIcon: Icon(Icons.mail_outline_rounded, color: MasaratColors.onSurfaceVariant),
+                prefixIcon: Icon(
+                  Icons.mail_outline_rounded,
+                  color: MasaratColors.onSurfaceVariant,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -72,13 +113,19 @@ class _SignInScreenState extends State<SignInScreen> {
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock_outline_rounded, color: MasaratColors.onSurfaceVariant),
+                prefixIcon: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: MasaratColors.onSurfaceVariant,
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: MasaratColors.onSurfaceVariant,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
@@ -86,7 +133,9 @@ class _SignInScreenState extends State<SignInScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // TODO: Implement password reset
+                },
                 child: Text(
                   'Forgot password?',
                   style: MasaratTypography.labelMedium.copyWith(
@@ -122,7 +171,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: _SocialButton(
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Google',
-                    onPressed: () {},
+                    onPressed: () {
+                      // TODO: Implement Google OAuth
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -130,10 +181,33 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: _SocialButton(
                     icon: Icons.apple,
                     label: 'Apple',
-                    onPressed: () {},
+                    onPressed: () {
+                      // TODO: Implement Apple OAuth
+                    },
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 32),
+            Center(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: RichText(
+                  text: TextSpan(
+                    style: MasaratTypography.bodyMedium,
+                    children: [
+                      const TextSpan(text: "Don't have an account? "),
+                      TextSpan(
+                        text: 'Sign Up',
+                        style: MasaratTypography.bodyMedium.copyWith(
+                          color: MasaratColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -153,7 +227,11 @@ class _GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
   final bool isLoading;
-  const _GradientButton({required this.label, required this.onPressed, this.isLoading = false});
+  const _GradientButton({
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +253,14 @@ class _GradientButton extends StatelessWidget {
         ),
         child: Center(
           child: isLoading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
               : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
@@ -187,7 +272,11 @@ class _SocialButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
-  const _SocialButton({required this.icon, required this.label, required this.onPressed});
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {

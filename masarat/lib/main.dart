@@ -1,114 +1,101 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
-import 'services/clerk_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/onboarding_screen.dart';
+import 'screens/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase before running the app
+  try {
+    debugPrint('Initializing Supabase...');
+    await SupabaseService.initialize();
+    debugPrint('✓ Supabase initialized successfully');
+  } catch (e) {
+    debugPrint('✗ Supabase initialization error: $e');
+  }
+
   runApp(const ProviderScope(child: MasaratApp()));
 }
 
-class MasaratApp extends StatefulWidget {
+class MasaratApp extends StatelessWidget {
   const MasaratApp({super.key});
 
   @override
-  State<MasaratApp> createState() => _MasaratAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Masarat',
+      debugShowCheckedModeBanner: false,
+      theme: MasaratTheme.lightTheme,
+      home: const MainScreen(),
+    );
+  }
 }
 
-class _MasaratAppState extends State<MasaratApp> {
-  bool _isSupabaseInitialized = false;
+/// Main screen that handles navigation based on auth state
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  bool _isLoading = true;
+  bool _isLoggedIn = false;
+  String? _userName;
 
   @override
   void initState() {
     super.initState();
-    _initSupabase();
+    _checkAuthState();
   }
 
-  Future<void> _initSupabase() async {
+  Future<void> _checkAuthState() async {
+    setState(() => _isLoading = true);
+
     try {
-      debugPrint('Initializing Supabase...');
-      await SupabaseService.initialize();
-      if (mounted) {
-        setState(() => _isSupabaseInitialized = true);
-      }
-      debugPrint('Supabase initialized.');
+      final session = SupabaseService.client.auth.currentSession;
+
+      setState(() {
+        _isLoggedIn = session != null;
+        _userName = session?.user?.email?.split('@').first ?? 'Partner';
+        _isLoading = false;
+      });
+
+      debugPrint('Auth state: ${_isLoggedIn ? 'logged in' : 'guest'}');
     } catch (e) {
-      debugPrint('Supabase error: $e');
-      if (mounted) {
-        setState(() => _isSupabaseInitialized = true);
-      }
+      debugPrint('Auth check error: $e');
+      setState(() {
+        _isLoggedIn = false;
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isSupabaseInitialized) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(color: Colors.deepPurple),
-                const SizedBox(height: 16),
-                const Text('Masarat: Initializing Database...', 
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Colors.deepPurple),
+              const SizedBox(height: 16),
+              Text(
+                'Loading Masarat...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return ClerkAuth(
-      config: ClerkAuthConfig(publishableKey: ClerkService.publishableKey),
-      child: Builder(
-        builder: (context) {
-          try {
-            final auth = ClerkAuth.of(context);
-            debugPrint('Auth Session: ${auth.session}');
-            
-            if (auth.session != null) {
-              return MaterialApp(
-                title: 'Masarat',
-                theme: MasaratTheme.lightTheme,
-                home: const HomeScreen(),
-                debugShowCheckedModeBanner: false,
-              );
-            } else {
-              return MaterialApp(
-                title: 'Masarat',
-                theme: MasaratTheme.lightTheme,
-                home: const OnboardingScreen(),
-                debugShowCheckedModeBanner: false,
-              );
-            }
-          } catch (e) {
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text('Syncing Identity...'),
-                      if (e.toString().contains('null'))
-                        const Text('(Waiting for Auth Service)')
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-        },
-      ),
-    );
+    return _isLoggedIn ? const HomeScreen() : const WelcomeScreen();
   }
 }

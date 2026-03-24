@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:masarat/core/theme/colors.dart';
 import 'package:masarat/core/theme/typography.dart';
 import '../services/supabase_service.dart';
@@ -28,15 +28,20 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       appBar: AppBar(
         backgroundColor: MasaratColors.surface,
         elevation: 0,
-        title: Text('Post a Shared Trip', style: MasaratTypography.headlineSmall),
+        title: Text(
+          'Post a Shared Trip',
+          style: MasaratTypography.headlineSmall,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Where are you going?',
-                style: MasaratTypography.headlineSmall),
+            Text(
+              'Where are you going?',
+              style: MasaratTypography.headlineSmall,
+            ),
             const SizedBox(height: 24),
 
             // Route fields
@@ -45,8 +50,11 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               decoration: const InputDecoration(
                 labelText: 'Departure City',
                 hintText: 'e.g. Tunis',
-                prefixIcon: Icon(Icons.radio_button_checked_rounded,
-                    color: MasaratColors.primary, size: 18),
+                prefixIcon: Icon(
+                  Icons.radio_button_checked_rounded,
+                  color: MasaratColors.primary,
+                  size: 18,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -55,8 +63,11 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               decoration: const InputDecoration(
                 labelText: 'Destination City',
                 hintText: 'e.g. Sousse',
-                prefixIcon: Icon(Icons.location_on_rounded,
-                    color: MasaratColors.primary, size: 18),
+                prefixIcon: Icon(
+                  Icons.location_on_rounded,
+                  color: MasaratColors.primary,
+                  size: 18,
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -94,7 +105,9 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                         : _selectedTime!.format(context),
                     onTap: () async {
                       final time = await showTimePicker(
-                          context: context, initialTime: TimeOfDay.now());
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
                       if (time != null) setState(() => _selectedTime = time);
                     },
                   ),
@@ -125,10 +138,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Column(
                       children: [
-                        Text(
-                          '$_seats',
-                          style: MasaratTypography.headlineLarge,
-                        ),
+                        Text('$_seats', style: MasaratTypography.headlineLarge),
                         Text('seats', style: MasaratTypography.labelSmall),
                       ],
                     ),
@@ -161,17 +171,17 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
         _destinationController.text.isEmpty ||
         _selectedDate == null ||
         _selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final authState = ClerkAuth.of(context);
-      final userId = authState.session?.user.id;
+      // Get current user from Supabase
+      final userId = SupabaseService.client.auth.currentUser?.id;
 
       if (userId == null) {
         throw Exception('User not authenticated');
@@ -195,12 +205,23 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Trip published successfully!')),
         );
-        Navigator.pop(context);
+        // Clear form
+        _departureController.clear();
+        _destinationController.clear();
+        setState(() {
+          _selectedDate = null;
+          _selectedTime = null;
+          _seats = 3;
+        });
       }
     } catch (e) {
+      debugPrint('Error publishing trip: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error publishing trip: $e')),
+          SnackBar(
+            content: Text('Error publishing trip: $e'),
+            backgroundColor: MasaratColors.error,
+          ),
         );
       }
     } finally {
@@ -221,11 +242,12 @@ class _PickerCard extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback onTap;
-  const _PickerCard(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      required this.onTap});
+  const _PickerCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +347,10 @@ class _GradientButton extends StatelessWidget {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2))
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
               : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
