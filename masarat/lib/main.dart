@@ -30,13 +30,13 @@ class _MasaratAppState extends State<MasaratApp> {
 
   Future<void> _initSupabase() async {
     try {
-      debugPrint('Initializing Supabase from MasaratApp...');
+      debugPrint('DEBUG: Initializing Supabase...');
       await SupabaseService.initialize();
       setState(() => _isSupabaseInitialized = true);
-      debugPrint('Supabase initialized.');
+      debugPrint('DEBUG: Supabase initialized.');
     } catch (e) {
-      debugPrint('Supabase init error: $e');
-      setState(() => _isSupabaseInitialized = true); // Proceed anyway to show something
+      debugPrint('DEBUG: Supabase error: $e');
+      setState(() => _isSupabaseInitialized = true);
     }
   }
 
@@ -51,7 +51,7 @@ class _MasaratAppState extends State<MasaratApp> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Checking Database Connection...', style: TextStyle(color: Colors.black)),
+                Text('Connecting to Masarat Services...'),
               ],
             ),
           ),
@@ -65,7 +65,7 @@ class _MasaratAppState extends State<MasaratApp> {
         builder: (context) {
           try {
             final auth = ClerkAuth.of(context);
-            debugPrint('ClerkAuth session: ${auth.session}');
+            debugPrint('DEBUG: Auth State - Session: ${auth.session}');
             
             if (auth.session != null) {
               return MaterialApp(
@@ -83,9 +83,10 @@ class _MasaratAppState extends State<MasaratApp> {
               );
             }
           } catch (e) {
-            return MaterialApp(
+             debugPrint('DEBUG: Auth Error: $e');
+             return MaterialApp(
               home: Scaffold(
-                body: Center(child: Text('Auth Syncing... $e')),
+                body: Center(child: Text('Auth Syncing...\n$e')),
               ),
             );
           }
