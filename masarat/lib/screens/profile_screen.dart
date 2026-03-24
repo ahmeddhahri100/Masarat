@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import '../models/user_model.dart';
 import 'premium_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -8,141 +11,172 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ClerkAuth.of(context);
+    final user = authState.session?.user;
+    final userId = user?.id;
+
     return Scaffold(
       backgroundColor: MasaratColors.surface,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Hero section with gradient
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 72, 24, 40),
-              decoration: const BoxDecoration(
-                gradient: MasaratColors.primaryGradient,
-              ),
-              child: Column(
-                children: [
-                  Stack(
+      body: userId == null
+          ? const Center(child: Text('Please sign in to view your profile'))
+          : FutureBuilder<UserModel?>(
+              future: SupabaseService.getUserProfile(userId),
+              builder: (context, snapshot) {
+                final userProfile = snapshot.data;
+                return SingleChildScrollView(
+                  child: Column(
                     children: [
+                      // Hero section with gradient
                       Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(24),
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(24, 72, 24, 40),
+                        decoration: const BoxDecoration(
+                          gradient: MasaratColors.primaryGradient,
                         ),
-                        child: const Icon(Icons.person_rounded,
-                            color: Colors.white, size: 44),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: MasaratColors.primaryFixed,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: MasaratColors.primary, width: 2),
-                          ),
-                          child: const Icon(Icons.verified_rounded,
-                              color: MasaratColors.primary, size: 14),
+                        child: Column(
+                          children: [
+                            Stack(
+                              children: [
+                                Container(
+                                  width: 90,
+                                  height: 90,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(24),
+                                    image: user?.imageUrl != null
+                                        ? DecorationImage(
+                                            image: NetworkImage(user!.imageUrl!),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  child: user?.imageUrl == null
+                                      ? const Icon(Icons.person_rounded,
+                                          color: Colors.white, size: 44)
+                                      : null,
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 26,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: MasaratColors.primaryFixed,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: MasaratColors.primary, width: 2),
+                                    ),
+                                    child: const Icon(Icons.verified_rounded,
+                                        color: MasaratColors.primary, size: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              user?.firstName ?? 'Ahmed Dhahri',
+                              style: MasaratTypography.headlineMedium
+                                  .copyWith(color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            if (userProfile?.isPremium ?? true)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'PREMIUM MEMBER',
+                                  style: MasaratTypography.labelSmall.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                            // Stats
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _StatBadge(
+                                    label: 'Trips',
+                                    value: '${userProfile?.tripsCount ?? 24}'),
+                                Container(
+                                    width: 1,
+                                    height: 24,
+                                    color: Colors.white.withOpacity(0.3),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 24)),
+                                _StatBadge(
+                                    label: 'Rating',
+                                    value: '${userProfile?.rating ?? 4.9} ★'),
+                                Container(
+                                    width: 1,
+                                    height: 24,
+                                    color: Colors.white.withOpacity(0.3),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 24)),
+                                _StatBadge(
+                                    label: 'Reviews',
+                                    value: '${userProfile?.reviewsCount ?? 18}'),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Ahmed Dhahri',
-                    style: MasaratTypography.headlineMedium
-                        .copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'PREMIUM MEMBER',
-                      style: MasaratTypography.labelSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _StatBadge(label: 'Trips', value: '24'),
-                      Container(
-                          width: 1,
-                          height: 24,
-                          color: Colors.white.withOpacity(0.3),
-                          margin: const EdgeInsets.symmetric(horizontal: 24)),
-                      _StatBadge(label: 'Rating', value: '4.9 ★'),
-                      Container(
-                          width: 1,
-                          height: 24,
-                          color: Colors.white.withOpacity(0.3),
-                          margin: const EdgeInsets.symmetric(horizontal: 24)),
-                      _StatBadge(label: 'Reviews', value: '18'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
 
-            // Menu items
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  _ProfileTile(
-                      icon: Icons.edit_outlined,
-                      title: 'Edit Profile',
-                      subtitle: 'Update your info',
-                      onTap: () {}),
-                  _ProfileTile(
-                      icon: Icons.history_rounded,
-                      title: 'Journey History',
-                      subtitle: 'View past trips',
-                      onTap: () {}),
-                  _ProfileTile(
-                      icon: Icons.stars_rounded,
-                      title: 'Premium Subscription',
-                      subtitle: 'Manage your plan',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const PremiumScreen()),
-                        );
-                      }),
-                  _ProfileTile(
-                      icon: Icons.settings_outlined,
-                      title: 'Settings',
-                      subtitle: 'Notifications & more',
-                      onTap: () {}),
-                  const SizedBox(height: 24),
-                  _ProfileTile(
-                      icon: Icons.logout_rounded,
-                      title: 'Logout',
-                      subtitle: '',
-                      onTap: () {},
-                      isDestructive: true),
-                ],
-              ),
+                      // Menu items
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            _ProfileTile(
+                                icon: Icons.edit_outlined,
+                                title: 'Edit Profile',
+                                subtitle: 'Update your info',
+                                onTap: () {}),
+                            _ProfileTile(
+                                icon: Icons.history_rounded,
+                                title: 'Journey History',
+                                subtitle: 'View past trips',
+                                onTap: () {}),
+                            _ProfileTile(
+                                icon: Icons.stars_rounded,
+                                title: 'Premium Subscription',
+                                subtitle: 'Manage your plan',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const PremiumScreen()),
+                                  );
+                                }),
+                            _ProfileTile(
+                                icon: Icons.settings_outlined,
+                                title: 'Settings',
+                                subtitle: 'Notifications & more',
+                                onTap: () {}),
+                            const SizedBox(height: 24),
+                            _ProfileTile(
+                                icon: Icons.logout_rounded,
+                                title: 'Logout',
+                                subtitle: '',
+                                onTap: () async {
+                                  await authState.signOut();
+                                },
+                                isDestructive: true),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -157,7 +191,8 @@ class _StatBadge extends StatelessWidget {
     return Column(
       children: [
         Text(value,
-            style: MasaratTypography.headlineSmall.copyWith(color: Colors.white)),
+            style: MasaratTypography.headlineSmall
+                .copyWith(color: Colors.white)),
         const SizedBox(height: 2),
         Text(label,
             style: MasaratTypography.labelSmall
@@ -183,7 +218,8 @@ class _ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? MasaratColors.tertiary : MasaratColors.primary;
+    final color =
+        isDestructive ? MasaratColors.tertiary : MasaratColors.primary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(

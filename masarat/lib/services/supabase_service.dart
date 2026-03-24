@@ -38,6 +38,15 @@ class SupabaseService {
     return (response as List).map((json) => TripModel.fromJson(json)).toList();
   }
 
+  static Future<List<TripModel>> searchTrips(String query) async {
+    final response = await client
+        .from('trips')
+        .select('*, profiles(name, avatar_url)')
+        .or('departure.ilike.%$query%,destination.ilike.%$query%')
+        .order('date', ascending: false);
+    return (response as List).map((json) => TripModel.fromJson(json)).toList();
+  }
+
   // User Profiles
   static Future<UserModel?> getUserProfile(String userId) async {
     try {

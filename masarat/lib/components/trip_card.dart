@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../models/trip_model.dart';
 
 class TripCard extends StatelessWidget {
-  const TripCard({super.key});
+  final TripModel trip;
+  const TripCard({super.key, required this.trip});
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +35,24 @@ class TripCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: MasaratColors.secondaryFixed,
                   borderRadius: BorderRadius.circular(12),
+                  image: trip.driverAvatar != null
+                      ? DecorationImage(
+                          image: NetworkImage(trip.driverAvatar!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: const Icon(Icons.person, color: MasaratColors.primary, size: 20),
+                child: trip.driverAvatar == null
+                    ? const Icon(Icons.person,
+                        color: MasaratColors.primary, size: 20)
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sami R.',
+                    Text(trip.driverName ?? 'Unknown Driver',
                         style: MasaratTypography.labelLarge),
                     Text('4.9 ★ · Community Member',
                         style: MasaratTypography.labelSmall),
@@ -55,7 +66,7 @@ class TripCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '3 Seats',
+                  '${trip.availableSeats} Seats',
                   style: MasaratTypography.labelMedium.copyWith(
                     color: MasaratColors.primary,
                     fontWeight: FontWeight.w600,
@@ -83,7 +94,8 @@ class TripCard extends StatelessWidget {
                     height: 28,
                     color: MasaratColors.outlineVariant,
                   ),
-                  const Icon(Icons.location_on, size: 12, color: MasaratColors.primary),
+                  const Icon(Icons.location_on,
+                      size: 12, color: MasaratColors.primary),
                 ],
               ),
               const SizedBox(width: 14),
@@ -91,11 +103,11 @@ class TripCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Tunis',
+                    Text(trip.from,
                         style: MasaratTypography.bodyMedium
                             .copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 14),
-                    Text('Sousse',
+                    Text(trip.to,
                         style: MasaratTypography.bodyMedium
                             .copyWith(fontWeight: FontWeight.w600)),
                   ],
@@ -104,11 +116,10 @@ class TripCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Today',
+                  Text('${trip.date.day}/${trip.date.month}',
                       style: MasaratTypography.labelSmall),
                   const SizedBox(height: 2),
-                  Text('08:30 AM',
-                      style: MasaratTypography.labelLarge),
+                  Text(trip.time, style: MasaratTypography.labelLarge),
                 ],
               ),
             ],

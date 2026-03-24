@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../components/trip_card.dart';
 import '../components/featured_trip_card.dart';
+import '../services/supabase_service.dart';
+import '../models/trip_model.dart';
 import 'conversations_screen.dart';
 import 'profile_screen.dart';
 import 'create_trip_screen.dart';
@@ -48,6 +51,11 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get current Clerk user
+    final authState = ClerkAuth.of(context);
+    final user = authState.session?.user;
+    final userName = user?.firstName ?? 'Partner';
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -62,7 +70,7 @@ class _HomeBody extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Marhaba, Ahmed 👋',
+                          'Marhaba, $userName 👋',
                           style: MasaratTypography.labelMedium.copyWith(
                             color: MasaratColors.onSurfaceVariant,
                             fontSize: 13,
@@ -80,9 +88,17 @@ class _HomeBody extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: MasaratColors.primaryGradient,
                       borderRadius: BorderRadius.circular(14),
+                      image: user?.imageUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(user!.imageUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                    child: const Icon(Icons.person_rounded,
-                        color: Colors.white, size: 20),
+                    child: user?.imageUrl == null
+                        ? const Icon(Icons.person_rounded,
+                            color: Colors.white, size: 20)
+                        : null,
                   ),
                 ],
               ),
@@ -142,11 +158,24 @@ class _HomeBody extends StatelessWidget {
           SliverToBoxAdapter(
             child: SizedBox(
               height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(left: 24, top: 12),
-                itemCount: 3,
-                itemBuilder: (context, index) => const FeaturedTripCard(),
+              child: FutureBuilder<List<TripModel>>(
+                future: SupabaseService.getBoostedTrips(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final trips = snapshot.data ?? [];
+                  if (trips.isEmpty) {
+                    return const Center(child: Text('No boosted trips today'));
+                  }
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 24, top: 12),
+                    itemCount: trips.length,
+                    itemBuilder: (context, index) =>
+                        FeaturedTripCard(trip: trips[index]),
+                  );
+                },
               ),
             ),
           ),
@@ -173,14 +202,30 @@ class _HomeBody extends StatelessWidget {
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => const TripCard(),
-                childCount: 5,
-              ),
-            ),
+          FutureBuilder<List<TripModel>>(
+            future: SupabaseService.getRecentTrips(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final trips = snapshot.data ?? [];
+              if (trips.isEmpty) {
+                return const SliverToBoxAdapter(
+                  child: Center(child: Text('No trips found')),
+                );
+              }
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => TripCard(trip: trips[index]),
+                    childCount: trips.length,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
