@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../models/trip_model.dart';
 
 class FeaturedTripCard extends StatelessWidget {
-  const FeaturedTripCard({super.key});
+  final TripModel trip;
+  const FeaturedTripCard({super.key, required this.trip});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +40,10 @@ class FeaturedTripCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
@@ -59,11 +64,13 @@ class FeaturedTripCard extends StatelessWidget {
                 const Spacer(),
                 // Route
                 Text(
-                  'Tunis → Hammamet',
+                  '${trip.from} → ${trip.to}',
                   style: MasaratTypography.headlineSmall.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -71,7 +78,7 @@ class FeaturedTripCard extends StatelessWidget {
                     const Icon(Icons.schedule, color: Colors.white70, size: 14),
                     const SizedBox(width: 4),
                     Text(
-                      'Tomorrow, 09:00 AM',
+                      '${trip.date.day}/${trip.date.month}, ${trip.time}',
                       style: MasaratTypography.labelSmall.copyWith(
                         color: Colors.white70,
                       ),

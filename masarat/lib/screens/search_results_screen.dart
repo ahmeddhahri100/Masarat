@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:masarat/core/theme/colors.dart';
-import 'package:masarat/core/theme/typography.dart';
-import 'package:masarat/components/trip_card.dart';
+import '../core/theme/colors.dart';
+import '../core/theme/typography.dart';
+import '../components/trip_card.dart';
+import '../services/supabase_service.dart';
+import '../models/trip_model.dart';
 
 class SearchResultsScreen extends StatelessWidget {
   final String query;
@@ -12,7 +14,9 @@ class SearchResultsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: MasaratColors.surface,
       appBar: AppBar(
-        title: Text('Search: $query'),
+        backgroundColor: MasaratColors.surface,
+        elevation: 0,
+        title: Text('Search: $query', style: MasaratTypography.headlineSmall),
         actions: [
           IconButton(
             icon: const Icon(Icons.tune_rounded),
@@ -29,20 +33,41 @@ class SearchResultsScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _FilterChip(label: 'Today', isSelected: true),
-                  _FilterChip(label: 'Price: Low to High', isSelected: false),
-                  _FilterChip(label: 'Seats: 2+', isSelected: false),
-                  _FilterChip(label: 'Verified Only', isSelected: false),
+                  const _FilterChip(label: 'Today', isSelected: true),
+                  const _FilterChip(label: 'Price: Low to High', isSelected: false),
+                  const _FilterChip(label: 'Seats: 2+', isSelected: false),
+                  const _FilterChip(label: 'Verified Only', isSelected: false),
                 ],
               ),
             ),
           ),
           
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              itemCount: 4,
-              itemBuilder: (context, index) => const TripCard(),
+            child: FutureBuilder<List<TripModel>>(
+              future: SupabaseService.searchTrips(query),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final trips = snapshot.data ?? [];
+                if (trips.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off_rounded, size: 64, color: MasaratColors.onSurfaceVariant.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        Text('No results for "$query"', style: MasaratTypography.bodyLarge),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  itemCount: trips.length,
+                  itemBuilder: (context, index) => TripCard(trip: trips[index]),
+                );
+              },
             ),
           ),
         ],
