@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:masarat/core/theme/colors.dart';
 import 'package:masarat/core/theme/typography.dart';
+import '../services/supabase_service.dart';
+import '../models/trip_model.dart';
+import 'package:uuid/uuid.dart';
 
 class CreateTripScreen extends StatefulWidget {
   const CreateTripScreen({super.key});
@@ -15,12 +19,17 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   int _seats = 3;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MasaratColors.surface,
-      appBar: AppBar(title: const Text('Post a Shared Trip')),
+      appBar: AppBar(
+        backgroundColor: MasaratColors.surface,
+        elevation: 0,
+        title: Text('Post a Shared Trip', style: MasaratTypography.headlineSmall),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -136,15 +145,67 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
             const SizedBox(height: 48),
 
             // CTA
-            _GradientButton(label: 'Publish Trip', onPressed: _publishTrip),
+            _GradientButton(
+              label: 'Publish Trip',
+              isLoading: _isLoading,
+              onPressed: _publishTrip,
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _publishTrip() {
-    // Check posting limit → publish
+  Future<void> _publishTrip() async {
+    if (_departureController.text.isEmpty ||
+        _destinationController.text.isEmpty ||
+        _selectedDate == null ||
+        _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authState = ClerkAuth.of(context);
+      final userId = authState.session?.user.id;
+
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final trip = TripModel(
+        id: const Uuid().v4(),
+        driverId: userId,
+        from: _departureController.text,
+        to: _destinationController.text,
+        date: _selectedDate!,
+        time: _selectedTime!.format(context),
+        availableSeats: _seats,
+        price: 15.0, // Default price for now
+        isBoosted: false,
+      );
+
+      await SupabaseService.createTrip(trip);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Trip published successfully!')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error publishing trip: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -233,12 +294,17 @@ class _StepperButton extends StatelessWidget {
 class _GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
-  const _GradientButton({required this.label, required this.onPressed});
+  final bool isLoading;
+  const _GradientButton({
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isLoading ? null : onPressed,
       child: Container(
         width: double.infinity,
         height: 56,
@@ -254,7 +320,13 @@ class _GradientButton extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: Text(label, style: MasaratTypography.buttonText),
+          child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
     );
