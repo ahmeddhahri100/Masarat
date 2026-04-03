@@ -4,16 +4,51 @@ import '../models/user_model.dart';
 import '../models/message_model.dart';
 
 class SupabaseService {
+  static const String _supabaseUrl =
+      'https://YOUR_PROJECT.supabase.co';
+  static const String _anonKey =
+      'YOUR_SUPABASE_ANON_KEY';
+
+  static bool _isInitialized = false;
+  static String? _initializationError;
+
+  static bool get isInitialized => _isInitialized;
+  static String? get initializationError => _initializationError;
+
   static Future<void> initialize() async {
-    print('Initializing Supabase...');
-    await Supabase.initialize(
-      url: 'https://YOUR_PROJECT.supabase.co',
-      anonKey:
-          'YOUR_SUPABASE_ANON_KEY',
-    );
+    try {
+      debugPrint('[Supabase] Initializing with URL: $_supabaseUrl');
+
+      await Supabase.initialize(
+        url: _supabaseUrl,
+        anonKey: _anonKey,
+        debug: true,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      );
+
+      _isInitialized = true;
+      _initializationError = null;
+      debugPrint('[Supabase] ✓ Initialized successfully');
+    } catch (e, stackTrace) {
+      _isInitialized = false;
+      _initializationError = e.toString();
+      debugPrint('[Supabase] ✗ Initialization failed: $e');
+      debugPrint('[Supabase] Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
-  static SupabaseClient get client => Supabase.instance.client;
+  static SupabaseClient get client {
+    if (!_isInitialized) {
+      throw StateError(
+        'Supabase client accessed before initialization. '
+        'Call SupabaseService.initialize() first.',
+      );
+    }
+    return Supabase.instance.client;
+  }
 
   // Trips
   static Stream<List<TripModel>> get tripsStream => client

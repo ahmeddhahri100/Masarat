@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
@@ -20,6 +21,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  static const _authTimeout = Duration(seconds: 15);
+
   Future<void> _handleSignUp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -35,17 +38,62 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showError('Please enter a valid email address');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final response = await SupabaseService.client.auth.signUp(
-        email: email,
-        password: password,
-        data: {'full_name': name},
-      );
+      if (!SupabaseService.isInitialized) {
+        _showError(
+          'Connection error: Authentication service is not available. '
+          'Please check your internet connection and try again.',
+        );
+        return;
+      }
+
+      debugPrint('[SignUp] Attempting signup for: $email');
+
+      final response = await SupabaseService.client.auth
+          .signUp(
+            email: email,
+            password: password,
+            data: {'full_name': name},
+          )
+          .timeout(
+            _authTimeout,
+            onTimeout: () {
+              throw TimeoutException(
+                'Signup request timed out after ${_authTimeout.inSeconds}s. '
+                'Please check your internet connection.',
+              );
+            },
+          );
 
       if (response.user != null) {
-        debugPrint('✓ Sign in successful: ${response.user?.email}');
+        debugPrint('[SignUp] ✓ User created: ${response.user?.id}');
+
+        if (response.user?.identities?.isEmpty ?? false) {
+          _showError(
+            'An account with this email already exists. '
+            'Please sign in instead.',
+          );
+          return;
+        }
+
+        await _createUserProfile(response.user!.id, name, email);
+
+        if (response.user?.emailConfirmedAt == null) {
+          debugPrint('[SignUp] Email not confirmed - showing confirmation message');
+          if (mounted) {
+            _showEmailConfirmationDialog(email);
+          }
+          return;
+        }
+
+        debugPrint('[SignUp] ✓ Sign up complete, navigating to home');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -64,12 +112,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
           );
         }
       }
+    } on TimeoutException catch (e) {
+      debugPrint('[SignUp] ✗ Timeout: $e');
+      _showError(
+        'Connection timed out. Please check your internet connection and try again.',
+      );
     } on AuthException catch (e) {
-      debugPrint('✗ Sign up error: ${e.message}');
-      _showError(e.message);
+      debugPrint('[SignUp] ✗ Auth error: ${e.message} (status: ${e.statusCode})');
+      _showError(_getFriendlyAuthError(e));
     } catch (e) {
-      debugPrint('✗ Unexpected error: $e');
-      _showError('An unexpected error occurred');
+      debugPrint('[SignUp] ✗ Unexpected error: $e');
+      _showError(
+        'An unexpected error occurred. Please check your connection and try again.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -77,7 +132,65 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  Future<void> _createUserProfile(String userId, String name, String email) async {
+    try {
+      debugPrint('[SignUp] Creating profile for user: $userId');
+      await SupabaseService.client.from('profiles').upsert({
+        'id': userId,
+        'name': name,
+        'email': email,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      debugPrint('[SignUp] ✓ Profile created/updated');
+    } catch (e) {
+      debugPrint('[SignUp] ⚠ Profile creation failed (non-critical): $e');
+    }
+  }
+
+  String _getFriendlyAuthError(AuthException e) {
+    final message = e.message.toLowerCase();
+    if (message.contains('email') && message.contains('already')) {
+      return 'An account with this email already exists. Please sign in instead.';
+    }
+    if (message.contains('password') && message.contains('6')) {
+      return 'Password must be at least 6 characters long.';
+    }
+    if (message.contains('invalid') || message.contains('unable')) {
+      return 'Unable to connect to the authentication service. Please check your internet connection.';
+    }
+    if (message.contains('network') || message.contains('socket')) {
+      return 'Network error. Please check your internet connection and try again.';
+    }
+    return e.message;
+  }
+
+  void _showEmailConfirmationDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Check Your Email'),
+        content: Text(
+          'We sent a confirmation link to $email. Please confirm your email, then sign in to continue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const SignInScreen()),
+              );
+            },
+            child: const Text('Go to Sign In'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

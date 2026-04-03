@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/supabase_service.dart';
 import '../models/user_model.dart';
 import 'premium_screen.dart';
+import 'welcome_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authState = ClerkAuth.of(context);
-    final user = authState.session?.user;
-    final userId = user?.id;
+    final session = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentSession
+        : null;
+    final userId = session?.user.id;
+    final userEmail = session?.user.email;
+    final userName = session?.user.userMetadata?['full_name'] as String?;
 
     return Scaffold(
       backgroundColor: MasaratColors.surface,
       body: userId == null
-          ? const Center(child: Text('Please sign in to view your profile'))
+          ? _buildGuestView(context)
           : FutureBuilder<UserModel?>(
               future: SupabaseService.getUserProfile(userId),
               builder: (context, snapshot) {
@@ -26,7 +29,6 @@ class ProfileScreen extends StatelessWidget {
                 return SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Hero section with gradient
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(24, 72, 24, 40),
@@ -43,17 +45,9 @@ class ProfileScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(24),
-                                    image: user?.imageUrl != null
-                                        ? DecorationImage(
-                                            image: NetworkImage(user!.imageUrl!),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
                                   ),
-                                  child: user?.imageUrl == null
-                                      ? const Icon(Icons.person_rounded,
-                                          color: Colors.white, size: 44)
-                                      : null,
+                                  child: const Icon(Icons.person_rounded,
+                                      color: Colors.white, size: 44),
                                 ),
                                 Positioned(
                                   bottom: 0,
@@ -75,7 +69,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              user?.firstName ?? 'User',
+                              userName ?? userName ?? 'User',
                               style: MasaratTypography.headlineMedium
                                   .copyWith(color: Colors.white),
                             ),
@@ -98,7 +92,6 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ),
                             const SizedBox(height: 16),
-                            // Stats
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -129,7 +122,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Menu items
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
@@ -166,7 +158,14 @@ class ProfileScreen extends StatelessWidget {
                                 title: 'Logout',
                                 subtitle: '',
                                 onTap: () async {
-                                  await authState.signOut();
+                                  await SupabaseService.client.auth.signOut();
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                          builder: (_) => const WelcomeScreen()),
+                                      (route) => false,
+                                    );
+                                  }
                                 },
                                 isDestructive: true),
                           ],
@@ -177,6 +176,34 @@ class ProfileScreen extends StatelessWidget {
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildGuestView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_outline_rounded,
+                size: 72, color: MasaratColors.onSurfaceVariant.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text('Sign in to view your profile',
+                style: MasaratTypography.bodyLarge),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  (route) => false,
+                );
+              },
+              child: const Text('Go to Sign In'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
