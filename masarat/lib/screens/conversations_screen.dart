@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/supabase_service.dart';
 import '../models/message_model.dart';
+import '../screens/welcome_screen.dart';
 import 'chat_screen.dart';
 
 class ConversationsScreen extends StatelessWidget {
@@ -11,8 +11,10 @@ class ConversationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ClerkAuth.of(context);
-    final userId = authState.session?.user.id;
+    final session = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentSession
+        : null;
+    final userId = session?.user.id;
 
     return Scaffold(
       backgroundColor: MasaratColors.surface,
@@ -22,7 +24,7 @@ class ConversationsScreen extends StatelessWidget {
         title: Text('Messages', style: MasaratTypography.headlineSmall),
       ),
       body: userId == null
-          ? const Center(child: Text('Please sign in to view messages'))
+          ? _buildGuestView(context)
           : FutureBuilder<List<ConversationModel>>(
               future: SupabaseService.getUserConversations(userId),
               builder: (context, snapshot) {
@@ -60,13 +62,47 @@ class ConversationsScreen extends StatelessWidget {
                       avatarUrl: conv.otherUserAvatar,
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ChatScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            tripId: null,
+                            otherUserId: conv.otherUserId,
+                            otherUserName: conv.otherUserName,
+                          ),
+                        ),
                       ),
                     );
                   },
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildGuestView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.chat_bubble_outline_rounded,
+                size: 72, color: MasaratColors.onSurfaceVariant.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text('Sign in to view your messages',
+                style: MasaratTypography.bodyLarge),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  (route) => false,
+                );
+              },
+              child: const Text('Go to Sign In'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -9,13 +9,15 @@ import 'screens/welcome_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase before running the app
   try {
-    debugPrint('Initializing Supabase...');
+    debugPrint('[Main] Initializing Supabase...');
     await SupabaseService.initialize();
-    debugPrint('✓ Supabase initialized successfully');
+    debugPrint('[Main] ✓ Supabase initialized successfully');
   } catch (e) {
-    debugPrint('✗ Supabase initialization error: $e');
+    debugPrint('[Main] ✗ Supabase initialization failed: $e');
+    debugPrint(
+      '[Main] App will continue in limited mode. Auth features will be unavailable.',
+    );
   }
 
   runApp(const ProviderScope(child: MasaratApp()));
@@ -58,6 +60,15 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _isLoading = true);
 
     try {
+      if (!SupabaseService.isInitialized) {
+        debugPrint('[Main] Supabase not initialized, showing welcome screen');
+        setState(() {
+          _isLoggedIn = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
       final session = SupabaseService.client.auth.currentSession;
 
       setState(() {
@@ -66,9 +77,9 @@ class _MainScreenState extends State<MainScreen> {
         _isLoading = false;
       });
 
-      debugPrint('Auth state: ${_isLoggedIn ? 'logged in' : 'guest'}');
+      debugPrint('[Main] Auth state: ${_isLoggedIn ? 'logged in' : 'guest'}');
     } catch (e) {
-      debugPrint('Auth check error: $e');
+      debugPrint('[Main] Auth check error: $e');
       setState(() {
         _isLoggedIn = false;
         _isLoading = false;

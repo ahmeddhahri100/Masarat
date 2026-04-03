@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/supabase_service.dart';
@@ -21,11 +20,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ClerkAuth.of(context);
-    final userId = authState.session?.user.id;
+    final session = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentSession
+        : null;
+    final userId = session?.user.id;
 
     if (userId == null) {
-      return const Scaffold(body: Center(child: Text('Please sign in')));
+      return const Scaffold(body: Center(child: Text('Please sign in to chat')));
     }
 
     return Scaffold(
