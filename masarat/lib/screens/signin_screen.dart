@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
@@ -18,6 +20,8 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  static const _authTimeout = Duration(seconds: 15);
+
   Future<void> _handleSignIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -30,13 +34,32 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await SupabaseService.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      if (!SupabaseService.isInitialized) {
+        _showError(
+          'Connection error: Authentication service is not available. '
+          'Please check your internet connection and try again.',
+        );
+        return;
+      }
+
+      debugPrint('[SignIn] Attempting sign in for: $email');
+
+      final response = await SupabaseService.client.auth
+          .signInWithPassword(
+            email: email,
+            password: password,
+          )
+          .timeout(
+            _authTimeout,
+            onTimeout: () {
+              throw TimeoutException(
+                'Sign in request timed out after ${_authTimeout.inSeconds}s.',
+              );
+            },
+          );
 
       if (response.user != null) {
-        debugPrint('✓ Sign in successful: ${response.user?.email}');
+        debugPrint('[SignIn] ✓ Sign in successful: ${response.user?.email}');
 
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -44,12 +67,26 @@ class _SignInScreenState extends State<SignInScreen> {
           );
         }
       }
+    } on TimeoutException catch (e) {
+      debugPrint('[SignIn] ✗ Timeout: $e');
+      _showError(
+        'Connection timed out. Please check your internet connection and try again.',
+      );
     } on AuthException catch (e) {
-      debugPrint('✗ Sign in error: ${e.message}');
-      _showError(e.message);
+      debugPrint('[SignIn] ✗ Auth error: ${e.message} (status: ${e.statusCode})');
+      final message = e.message.toLowerCase();
+      if (message.contains('email') && message.contains('confirm') ||
+          message.contains('not confirmed') ||
+          message.contains('verify')) {
+        _showEmailNotConfirmedDialog(email);
+        return;
+      }
+      _showError(_getFriendlyAuthError(e));
     } catch (e) {
-      debugPrint('✗ Unexpected error: $e');
-      _showError('An unexpected error occurred');
+      debugPrint('[SignIn] ✗ Unexpected error: $e');
+      _showError(
+        'An unexpected error occurred. Please check your connection and try again.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -57,7 +94,30 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  String _getFriendlyAuthError(AuthException e) {
+    final message = e.message.toLowerCase();
+    if (message.contains('invalid') && message.contains('login')) {
+      return 'Invalid email or password. Please try again.';
+    }
+    if (message.contains('network') || message.contains('socket')) {
+      return 'Network error. Please check your internet connection and try again.';
+    }
+    if (message.contains('too many')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    return e.message;
+  }
+
+  void _showEmailNotConfirmedDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _EmailNotConfirmedDialog(email: email),
+    );
+  }
+
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -297,6 +357,90 @@ class _SocialButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EmailNotConfirmedDialog extends StatefulWidget {
+  final String email;
+  const _EmailNotConfirmedDialog({required this.email});
+
+  @override
+  State<_EmailNotConfirmedDialog> createState() =>
+      _EmailNotConfirmedDialogState();
+}
+
+class _EmailNotConfirmedDialogState extends State<_EmailNotConfirmedDialog> {
+  bool _isResending = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      icon: Icon(
+        Icons.mark_email_unread_rounded,
+        size: 48,
+        color: MasaratColors.primary,
+      ),
+      title: const Text('Email Not Confirmed'),
+      content: Text(
+        'Your email ${widget.email} has not been confirmed yet. Please check your inbox and spam folder for the confirmation link.',
+        style: MasaratTypography.bodyMedium,
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isResending
+              ? null
+              : () async {
+                  setState(() => _isResending = true);
+                  try {
+                    await SupabaseService.client.auth.resend(
+                      type: OtpType.signup,
+                      email: widget.email,
+                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Confirmation email resent to ${widget.email}'),
+                          backgroundColor: MasaratColors.primary,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Failed to resend. Please try again.'),
+                          backgroundColor: MasaratColors.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isResending = false);
+                  }
+                },
+          child: _isResending
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Resend Email'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
+        ),
+      ],
     );
   }
 }
