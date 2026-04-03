@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
@@ -56,11 +57,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       debugPrint('[SignUp] Attempting signup for: $email');
 
+      final emailRedirectTo = kIsWeb
+          ? '${Uri.base.origin}/auth/callback'
+          : 'io.supabase.masarat://login-callback';
+
+      debugPrint('[SignUp] emailRedirectTo: $emailRedirectTo');
+
       final response = await SupabaseService.client.auth
           .signUp(
             email: email,
             password: password,
             data: {'full_name': name},
+            emailRedirectTo: emailRedirectTo,
           )
           .timeout(
             _authTimeout,
@@ -168,25 +176,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Check Your Email'),
-        content: Text(
-          'We sent a confirmation link to $email. Please confirm your email, then sign in to continue.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const SignInScreen()),
-              );
-            },
-            child: const Text('Go to Sign In'),
-          ),
-        ],
+      builder: (context) => _EmailConfirmationDialog(
+        email: email,
+        onResend: () => _resendConfirmationEmail(email),
       ),
     );
+  }
+
+  Future<void> _resendConfirmationEmail(String email) async {
+    try {
+      await SupabaseService.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+      debugPrint('[SignUp] ✓ Confirmation email resent to: $email');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Confirmation email resent to $email'),
+            backgroundColor: MasaratColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[SignUp] ✗ Resend failed: $e');
+      if (mounted) {
+        _showError('Failed to resend confirmation email. Please try again.');
+      }
+    }
   }
 
   void _showError(String message) {
@@ -366,6 +387,73 @@ class _GradientButton extends StatelessWidget {
               : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
+    );
+  }
+}
+
+class _EmailConfirmationDialog extends StatefulWidget {
+  final String email;
+  final VoidCallback onResend;
+  const _EmailConfirmationDialog({
+    required this.email,
+    required this.onResend,
+  });
+
+  @override
+  State<_EmailConfirmationDialog> createState() =>
+      _EmailConfirmationDialogState();
+}
+
+class _EmailConfirmationDialogState extends State<_EmailConfirmationDialog> {
+  bool _isResending = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      icon: Icon(
+        Icons.mark_email_unread_rounded,
+        size: 48,
+        color: MasaratColors.primary,
+      ),
+      title: const Text('Check Your Email'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'We sent a confirmation link to ${widget.email}. Please check your inbox and spam folder, then sign in to continue.',
+            style: MasaratTypography.bodyMedium,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isResending
+              ? null
+              : () async {
+                  setState(() => _isResending = true);
+                  widget.onResend();
+                  await Future.delayed(const Duration(seconds: 2));
+                  if (mounted) setState(() => _isResending = false);
+                },
+          child: _isResending
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Resend Email'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const SignInScreen()),
+            );
+          },
+          child: const Text('Go to Sign In'),
+        ),
+      ],
     );
   }
 }
