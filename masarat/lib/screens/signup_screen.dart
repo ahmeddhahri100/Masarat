@@ -120,7 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Full Name',
-                hintText: 'Ahmed Dhahri',
+                hintText: 'Enter your full name',
                 prefixIcon: Icon(
                   Icons.person_outline_rounded,
                   color: MasaratColors.onSurfaceVariant,
@@ -133,7 +133,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email',
-                hintText: 'name@example.com',
+                hintText: 'yourname@example.com',
                 prefixIcon: Icon(
                   Icons.mail_outline_rounded,
                   color: MasaratColors.onSurfaceVariant,

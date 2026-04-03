@@ -75,7 +75,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              user?.firstName ?? 'Ahmed Dhahri',
+                              user?.firstName ?? 'User',
                               style: MasaratTypography.headlineMedium
                                   .copyWith(color: Colors.white),
                             ),
