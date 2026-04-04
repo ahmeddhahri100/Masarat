@@ -1,10 +1,7 @@
-import 'dart:async';
-import 'package:clerk_flutter/clerk_flutter.dart';
-import 'package:clerk_auth/clerk_auth.dart' show Strategy;
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
-import 'home_screen.dart';
+import '../services/auth_service.dart';
 import 'signin_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -20,8 +17,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-
-  static const _authTimeout = Duration(seconds: 15);
 
   Future<void> _handleSignUp() async {
     final name = _nameController.text.trim();
@@ -46,71 +41,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authState = ClerkAuth.of(context);
-
-      debugPrint('[SignUp] Attempting signup for: $email');
-
-      await authState.attemptSignUp(
-        strategy: Strategy.emailAddress,
-        emailAddress: email,
+      final response = await AuthService.signUp(
+        email: email,
         password: password,
-        firstName: name.split(' ').first,
-        lastName: name.split(' ').length > 1
-            ? name.split(' ').sublist(1).join(' ')
-            : null,
-      ).timeout(
-        _authTimeout,
-        onTimeout: () {
-          throw TimeoutException(
-            'Signup request timed out after ${_authTimeout.inSeconds}s. '
-            'Please check your internet connection.',
+        fullName: name,
+      );
+
+      if (!mounted) return;
+
+      if (response.user != null && response.session == null) {
+        _showInfo(
+          'Account created! Please check your email to confirm your account, then sign in.',
+          isSuccess: true,
+        );
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
           );
-        },
-      );
-
-      debugPrint('[SignUp] User created, navigating to home');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Account created! Welcome, $name'),
-            backgroundColor: MasaratColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        }
       }
-    } on TimeoutException catch (e) {
-      debugPrint('[SignUp] Timeout: $e');
-      _showError(
-        'Connection timed out. Please check your internet connection and try again.',
-      );
     } catch (e) {
       debugPrint('[SignUp] Error: $e');
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('already') || errorMessage.contains('exists')) {
-        _showError(
-          'An account with this email already exists. Please sign in instead.',
-        );
-      } else if (errorMessage.contains('password')) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('already') || msg.contains('exists') || msg.contains('registered')) {
+        _showError('An account with this email already exists. Please sign in.');
+      } else if (msg.contains('password')) {
         _showError('Password must be at least 6 characters long.');
-      } else if (errorMessage.contains('network') || errorMessage.contains('socket')) {
-        _showError('Network error. Please check your internet connection and try again.');
+      } else if (msg.contains('email')) {
+        _showError('Please enter a valid email address.');
       } else {
-        _showError(
-          'An unexpected error occurred. Please check your connection and try again.',
-        );
+        _showError('Sign up failed. Please try again.');
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -121,6 +86,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
         content: Text(message),
         backgroundColor: MasaratColors.error,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showInfo(String message, {bool isSuccess = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? MasaratColors.primary : MasaratColors.onSurfaceVariant,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -182,6 +160,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              onSubmitted: (_) => _handleSignUp(),
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(

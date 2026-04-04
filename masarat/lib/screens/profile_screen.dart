@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/supabase_service.dart';
-import '../services/clerk_auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'premium_screen.dart';
 import 'welcome_screen.dart';
@@ -12,8 +12,8 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = ClerkAuthService.userId;
-    final userName = ClerkAuthService.userName;
+    final userId = AuthService.userId;
+    final userName = AuthService.userName;
 
     return Scaffold(
       backgroundColor: MasaratColors.surface,
@@ -155,7 +155,7 @@ class ProfileScreen extends StatelessWidget {
                                 title: 'Logout',
                                 subtitle: '',
                                 onTap: () async {
-                                  await ClerkAuthService.signOut();
+                                  await AuthService.signOut();
                                   if (context.mounted) {
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(

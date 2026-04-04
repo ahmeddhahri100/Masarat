@@ -4,7 +4,7 @@ import '../core/theme/typography.dart';
 import '../components/trip_card.dart';
 import '../components/featured_trip_card.dart';
 import '../services/supabase_service.dart';
-import '../services/clerk_auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/trip_model.dart';
 import 'conversations_screen.dart';
 import 'profile_screen.dart';
@@ -51,8 +51,7 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userName =
-        ClerkAuthService.userName ?? 'Partner';
+    final userName = AuthService.userName ?? 'Partner';
 
     return SafeArea(
       child: CustomScrollView(

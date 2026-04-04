@@ -39,9 +39,15 @@ cd masarat && flutter build web --release
 ```
 Then restart the workflow.
 
+## Authentication
+Authentication is handled by **Supabase Auth** (email/password). Clerk integration is present in the codebase but not used — `AuthService` in `lib/services/auth_service.dart` is the active auth layer.
+
+- Sign up creates a Supabase user and a profile row in the `profiles` table
+- If Supabase requires email confirmation, users will be prompted to check their inbox before signing in
+- Sign out clears the Supabase session and returns to WelcomeScreen
+
 ## Configuration
 - **Supabase URL/Key:** Hardcoded in `lib/services/supabase_service.dart`
-- **Clerk Publishable Key:** Set to placeholder `YOUR_CLERK_PUBLISHABLE_KEY` in `lib/services/clerk_auth_service.dart` — must be replaced with a real Clerk publishable key for auth to work
 
 ## Deployment
 Configured as a static deployment with:
