@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../components/trip_card.dart';
 import '../components/featured_trip_card.dart';
 import '../services/supabase_service.dart';
+import '../services/clerk_auth_service.dart';
 import '../models/trip_model.dart';
 import 'conversations_screen.dart';
 import 'profile_screen.dart';
@@ -51,12 +51,8 @@ class _HomeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get current Supabase user
-    final user = SupabaseService.client.auth.currentUser;
     final userName =
-        user?.userMetadata?['full_name'] ??
-        user?.email?.split('@').first ??
-        'Partner';
+        ClerkAuthService.userName ?? 'Partner';
 
     return SafeArea(
       child: CustomScrollView(

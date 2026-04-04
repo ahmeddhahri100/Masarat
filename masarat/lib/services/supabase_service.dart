@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
+import 'clerk_auth_service.dart';
 
 class SupabaseService {
   static const String _supabaseUrl =
@@ -12,6 +13,7 @@ class SupabaseService {
 
   static bool _isInitialized = false;
   static String? _initializationError;
+  static SupabaseClient? _client;
 
   static bool get isInitialized => _isInitialized;
   static String? get initializationError => _initializationError;
@@ -29,13 +31,14 @@ class SupabaseService {
         ),
       );
 
+      _client = Supabase.instance.client;
       _isInitialized = true;
       _initializationError = null;
-      debugPrint('[Supabase] ✓ Initialized successfully');
+      debugPrint('[Supabase] Initialized successfully (DB only, auth via Clerk)');
     } catch (e, stackTrace) {
       _isInitialized = false;
       _initializationError = e.toString();
-      debugPrint('[Supabase] ✗ Initialization failed: $e');
+      debugPrint('[Supabase] Initialization failed: $e');
       debugPrint('[Supabase] Stack trace: $stackTrace');
       rethrow;
     }
@@ -48,7 +51,44 @@ class SupabaseService {
         'Call SupabaseService.initialize() first.',
       );
     }
-    return Supabase.instance.client;
+    return _client!;
+  }
+
+  static SupabaseClient getAuthenticatedClient() {
+    if (!ClerkAuthService.isSignedIn) {
+      throw StateError(
+        'Cannot create authenticated Supabase client: user is not signed in via Clerk.',
+      );
+    }
+
+    return SupabaseClient(
+      _supabaseUrl,
+      _anonKey,
+      headers: {
+        'Authorization': 'Bearer ${ClerkAuthService.getToken()}',
+      },
+    );
+  }
+
+  static Future<SupabaseClient> getAuthenticatedClientAsync() async {
+    if (!ClerkAuthService.isSignedIn) {
+      throw StateError(
+        'Cannot create authenticated Supabase client: user is not signed in via Clerk.',
+      );
+    }
+
+    final token = await ClerkAuthService.getToken();
+    if (token == null) {
+      throw StateError('Failed to retrieve Clerk session token.');
+    }
+
+    return SupabaseClient(
+      _supabaseUrl,
+      _anonKey,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
   }
 
   // Trips
@@ -77,7 +117,8 @@ class SupabaseService {
   }
 
   static Future<void> createTrip(TripModel trip) async {
-    await client.from('trips').insert(trip.toJson());
+    final authClient = await getAuthenticatedClientAsync();
+    await authClient.from('trips').insert(trip.toJson());
   }
 
   static Future<List<TripModel>> searchTrips(String query) async {
@@ -114,13 +155,12 @@ class SupabaseService {
   }
 
   static Future<void> sendMessage(MessageModel message) async {
-    await client.from('messages').insert(message.toJson());
+    final authClient = await getAuthenticatedClientAsync();
+    await authClient.from('messages').insert(message.toJson());
   }
 
   static Future<List<ConversationModel>> getUserConversations(
       String userId) async {
-    // In a real scenario, this would be a more complex query or a RPC call.
-    // For now, let's fetch all messages involving the user and group them.
     final response = await client
         .from('messages')
         .select('*, profiles:sender_id(name, avatar_url)')
@@ -129,14 +169,13 @@ class SupabaseService {
 
     final messages = (response as List).map((json) => MessageModel.fromJson(json)).toList();
     
-    // Simple grouping logic
     final Map<String, ConversationModel> conversations = {};
     for (var msg in messages) {
       final otherId = msg.senderId == userId ? msg.receiverId : msg.senderId;
       if (!conversations.containsKey(otherId)) {
         conversations[otherId] = ConversationModel(
           otherUserId: otherId,
-          otherUserName: 'User $otherId', // In real, join with profiles
+          otherUserName: 'User $otherId',
           lastMessage: msg.content,
           lastMessageTime: msg.timestamp,
           isUnread: false, 

@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:clerk_auth/clerk_auth.dart' show Strategy;
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
-import '../services/supabase_service.dart';
 import 'home_screen.dart';
 import 'signin_screen.dart';
 
@@ -47,153 +46,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (!SupabaseService.isInitialized) {
-        _showError(
-          'Connection error: Authentication service is not available. '
-          'Please check your internet connection and try again.',
-        );
-        return;
-      }
+      final authState = ClerkAuth.of(context);
 
       debugPrint('[SignUp] Attempting signup for: $email');
 
-      final emailRedirectTo = kIsWeb
-          ? '${Uri.base.origin}/auth/callback'
-          : 'io.supabase.masarat://login-callback';
-
-      debugPrint('[SignUp] emailRedirectTo: $emailRedirectTo');
-
-      final response = await SupabaseService.client.auth
-          .signUp(
-            email: email,
-            password: password,
-            data: {'full_name': name},
-            emailRedirectTo: emailRedirectTo,
-          )
-          .timeout(
-            _authTimeout,
-            onTimeout: () {
-              throw TimeoutException(
-                'Signup request timed out after ${_authTimeout.inSeconds}s. '
-                'Please check your internet connection.',
-              );
-            },
+      await authState.attemptSignUp(
+        strategy: Strategy.emailAddress,
+        emailAddress: email,
+        password: password,
+        firstName: name.split(' ').first,
+        lastName: name.split(' ').length > 1
+            ? name.split(' ').sublist(1).join(' ')
+            : null,
+      ).timeout(
+        _authTimeout,
+        onTimeout: () {
+          throw TimeoutException(
+            'Signup request timed out after ${_authTimeout.inSeconds}s. '
+            'Please check your internet connection.',
           );
-
-      if (response.user != null) {
-        debugPrint('[SignUp] ✓ User created: ${response.user?.id}');
-
-        if (response.user?.identities?.isEmpty ?? false) {
-          _showError(
-            'An account with this email already exists. '
-            'Please sign in instead.',
-          );
-          return;
-        }
-
-        await _createUserProfile(response.user!.id, name, email);
-
-        if (response.user?.emailConfirmedAt == null) {
-          debugPrint('[SignUp] Email not confirmed - showing confirmation message');
-          if (mounted) {
-            _showEmailConfirmationDialog(email);
-          }
-          return;
-        }
-
-        debugPrint('[SignUp] ✓ Sign up complete, navigating to home');
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Account created! Welcome, $name'),
-              backgroundColor: MasaratColors.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
-        }
-      }
-    } on TimeoutException catch (e) {
-      debugPrint('[SignUp] ✗ Timeout: $e');
-      _showError(
-        'Connection timed out. Please check your internet connection and try again.',
+        },
       );
-    } on AuthException catch (e) {
-      debugPrint('[SignUp] ✗ Auth error: ${e.message} (status: ${e.statusCode})');
-      _showError(_getFriendlyAuthError(e));
-    } catch (e) {
-      debugPrint('[SignUp] ✗ Unexpected error: $e');
-      _showError(
-        'An unexpected error occurred. Please check your connection and try again.',
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
-  Future<void> _createUserProfile(String userId, String name, String email) async {
-    try {
-      debugPrint('[SignUp] Creating profile for user: $userId');
-      await SupabaseService.client.from('profiles').upsert({
-        'id': userId,
-        'name': name,
-        'email': email,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      debugPrint('[SignUp] ✓ Profile created/updated');
-    } catch (e) {
-      debugPrint('[SignUp] ⚠ Profile creation failed (non-critical): $e');
-    }
-  }
+      debugPrint('[SignUp] User created, navigating to home');
 
-  String _getFriendlyAuthError(AuthException e) {
-    final message = e.message.toLowerCase();
-    if (message.contains('email') && message.contains('already')) {
-      return 'An account with this email already exists. Please sign in instead.';
-    }
-    if (message.contains('password') && message.contains('6')) {
-      return 'Password must be at least 6 characters long.';
-    }
-    if (message.contains('invalid') || message.contains('unable')) {
-      return 'Unable to connect to the authentication service. Please check your internet connection.';
-    }
-    if (message.contains('network') || message.contains('socket')) {
-      return 'Network error. Please check your internet connection and try again.';
-    }
-    return e.message;
-  }
-
-  void _showEmailConfirmationDialog(String email) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _EmailConfirmationDialog(
-        email: email,
-        onResend: () => _resendConfirmationEmail(email),
-      ),
-    );
-  }
-
-  Future<void> _resendConfirmationEmail(String email) async {
-    try {
-      await SupabaseService.client.auth.resend(
-        type: OtpType.signup,
-        email: email,
-      );
-      debugPrint('[SignUp] ✓ Confirmation email resent to: $email');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Confirmation email resent to $email'),
+            content: Text('Account created! Welcome, $name'),
             backgroundColor: MasaratColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -201,11 +81,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
         );
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
       }
+    } on TimeoutException catch (e) {
+      debugPrint('[SignUp] Timeout: $e');
+      _showError(
+        'Connection timed out. Please check your internet connection and try again.',
+      );
     } catch (e) {
-      debugPrint('[SignUp] ✗ Resend failed: $e');
+      debugPrint('[SignUp] Error: $e');
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('already') || errorMessage.contains('exists')) {
+        _showError(
+          'An account with this email already exists. Please sign in instead.',
+        );
+      } else if (errorMessage.contains('password')) {
+        _showError('Password must be at least 6 characters long.');
+      } else if (errorMessage.contains('network') || errorMessage.contains('socket')) {
+        _showError('Network error. Please check your internet connection and try again.');
+      } else {
+        _showError(
+          'An unexpected error occurred. Please check your connection and try again.',
+        );
+      }
+    } finally {
       if (mounted) {
-        _showError('Failed to resend confirmation email. Please try again.');
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -387,73 +291,6 @@ class _GradientButton extends StatelessWidget {
               : Text(label, style: MasaratTypography.buttonText),
         ),
       ),
-    );
-  }
-}
-
-class _EmailConfirmationDialog extends StatefulWidget {
-  final String email;
-  final VoidCallback onResend;
-  const _EmailConfirmationDialog({
-    required this.email,
-    required this.onResend,
-  });
-
-  @override
-  State<_EmailConfirmationDialog> createState() =>
-      _EmailConfirmationDialogState();
-}
-
-class _EmailConfirmationDialogState extends State<_EmailConfirmationDialog> {
-  bool _isResending = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      icon: Icon(
-        Icons.mark_email_unread_rounded,
-        size: 48,
-        color: MasaratColors.primary,
-      ),
-      title: const Text('Check Your Email'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'We sent a confirmation link to ${widget.email}. Please check your inbox and spam folder, then sign in to continue.',
-            style: MasaratTypography.bodyMedium,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isResending
-              ? null
-              : () async {
-                  setState(() => _isResending = true);
-                  widget.onResend();
-                  await Future.delayed(const Duration(seconds: 2));
-                  if (mounted) setState(() => _isResending = false);
-                },
-          child: _isResending
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Resend Email'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const SignInScreen()),
-            );
-          },
-          child: const Text('Go to Sign In'),
-        ),
-      ],
     );
   }
 }

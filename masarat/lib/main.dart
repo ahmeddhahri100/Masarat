@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
+import 'services/clerk_auth_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   try {
     debugPrint('[Main] Initializing Supabase...');
     await SupabaseService.initialize();
-    debugPrint('[Main] ✓ Supabase initialized successfully');
+    debugPrint('[Main] Supabase initialized successfully');
   } catch (e) {
-    debugPrint('[Main] ✗ Supabase initialization failed: $e');
+    debugPrint('[Main] Supabase initialization failed: $e');
     debugPrint(
       '[Main] App will continue in limited mode. Auth features will be unavailable.',
     );
@@ -32,81 +36,33 @@ class MasaratApp extends StatelessWidget {
       title: 'Masarat',
       debugShowCheckedModeBanner: false,
       theme: MasaratTheme.lightTheme,
-      home: const MainScreen(),
+      home: const _AuthGate(),
     );
   }
 }
 
-/// Main screen that handles navigation based on auth state
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<_AuthGate> createState() => _AuthGateState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  bool _isLoading = true;
-  bool _isLoggedIn = false;
-  String? _userName;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuthState();
-  }
-
-  Future<void> _checkAuthState() async {
-    setState(() => _isLoading = true);
-
-    try {
-      if (!SupabaseService.isInitialized) {
-        debugPrint('[Main] Supabase not initialized, showing welcome screen');
-        setState(() {
-          _isLoggedIn = false;
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final session = SupabaseService.client.auth.currentSession;
-
-      setState(() {
-        _isLoggedIn = session != null;
-        _userName = session?.user?.email?.split('@').first ?? 'Partner';
-        _isLoading = false;
-      });
-
-      debugPrint('[Main] Auth state: ${_isLoggedIn ? 'logged in' : 'guest'}');
-    } catch (e) {
-      debugPrint('[Main] Auth check error: $e');
-      setState(() {
-        _isLoggedIn = false;
-        _isLoading = false;
-      });
-    }
-  }
-
+class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: Colors.deepPurple),
-              const SizedBox(height: 16),
-              Text(
-                'Loading Masarat...',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return _isLoggedIn ? const HomeScreen() : const WelcomeScreen();
+    return ClerkAuth(
+      config: ClerkAuthService.getConfig(),
+      child: ClerkAuthBuilder(
+        signedInBuilder: (context, authState) {
+          ClerkAuthService.updateAuthState(authState);
+          return const HomeScreen();
+        },
+        signedOutBuilder: (context, authState) {
+          ClerkAuthService.updateAuthState(authState);
+          return const WelcomeScreen();
+        },
+      ),
+    );
   }
 }
