@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart';
 
 class ClerkAuthService {
   static const String _publishableKey = 'YOUR_CLERK_PUBLISHABLE_KEY';
+  static const String _placeholderKey = 'YOUR_CLERK_PUBLISHABLE_KEY';
+
+  static bool get isConfigured =>
+      _publishableKey.isNotEmpty && _publishableKey != _placeholderKey;
 
   static ClerkAuthState? _clerkAuthState;
 

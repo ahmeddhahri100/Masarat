@@ -51,6 +51,11 @@ class _AuthGate extends StatefulWidget {
 class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
+    if (!ClerkAuthService.isConfigured) {
+      debugPrint('[AuthGate] Clerk key not configured, showing WelcomeScreen directly');
+      return const WelcomeScreen();
+    }
+
     return ClerkAuth(
       config: ClerkAuthService.getConfig(),
       child: ClerkAuthBuilder(
