@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:masarat/core/theme/colors.dart';
 import 'package:masarat/core/theme/typography.dart';
 import '../services/supabase_service.dart';
+import '../services/clerk_auth_service.dart';
 import '../models/trip_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -180,8 +180,8 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Get current user from Supabase
-      final userId = SupabaseService.client.auth.currentUser?.id;
+      // Get current user from Clerk
+      final userId = ClerkAuthService.userId;
 
       if (userId == null) {
         throw Exception('User not authenticated');
