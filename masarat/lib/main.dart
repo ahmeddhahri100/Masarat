@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
-import 'services/clerk_auth_service.dart';
+import 'services/auth_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 
@@ -19,9 +19,6 @@ void main() async {
     debugPrint('[Main] Supabase initialized successfully');
   } catch (e) {
     debugPrint('[Main] Supabase initialization failed: $e');
-    debugPrint(
-      '[Main] App will continue in limited mode. Auth features will be unavailable.',
-    );
   }
 
   runApp(const ProviderScope(child: MasaratApp()));
@@ -49,25 +46,27 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
+  bool _isSignedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSignedIn = AuthService.isSignedIn;
+
+    AuthService.authStateChanges.listen((AuthState state) {
+      if (mounted) {
+        setState(() {
+          _isSignedIn = state.session != null;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!ClerkAuthService.isConfigured) {
-      debugPrint('[AuthGate] Clerk key not configured, showing WelcomeScreen directly');
-      return const WelcomeScreen();
+    if (_isSignedIn) {
+      return const HomeScreen();
     }
-
-    return ClerkAuth(
-      config: ClerkAuthService.getConfig(),
-      child: ClerkAuthBuilder(
-        signedInBuilder: (context, authState) {
-          ClerkAuthService.updateAuthState(authState);
-          return const HomeScreen();
-        },
-        signedOutBuilder: (context, authState) {
-          ClerkAuthService.updateAuthState(authState);
-          return const WelcomeScreen();
-        },
-      ),
-    );
+    return const WelcomeScreen();
   }
 }

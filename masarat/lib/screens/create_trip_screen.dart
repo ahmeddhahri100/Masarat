@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:masarat/core/theme/colors.dart';
 import 'package:masarat/core/theme/typography.dart';
 import '../services/supabase_service.dart';
-import '../services/clerk_auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/trip_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -181,7 +181,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
 
     try {
       // Get current user from Clerk
-      final userId = ClerkAuthService.userId;
+      final userId = AuthService.userId;
 
       if (userId == null) {
         throw Exception('User not authenticated');

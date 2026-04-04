@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:clerk_flutter/clerk_flutter.dart';
-import 'package:clerk_auth/clerk_auth.dart' show Strategy;
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
+import '../services/auth_service.dart';
+import 'signup_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,8 +18,6 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  static const _authTimeout = Duration(seconds: 15);
-
   Future<void> _handleSignIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -32,43 +30,21 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authState = ClerkAuth.of(context);
-
-      debugPrint('[SignIn] Attempting sign in for: $email');
-
-      await authState.attemptSignIn(
-        strategy: Strategy.password,
-        identifier: email,
-        password: password,
-      ).timeout(
-        _authTimeout,
-        onTimeout: () {
-          throw TimeoutException(
-            'Sign in request timed out after ${_authTimeout.inSeconds}s.',
-          );
-        },
-      );
-
-      debugPrint('[SignIn] Sign in successful: $email');
-    } on TimeoutException catch (e) {
-      debugPrint('[SignIn] Timeout: $e');
-      _showError(
-        'Connection timed out. Please check your internet connection and try again.',
-      );
+      await AuthService.signIn(email: email, password: password);
+    } on TimeoutException {
+      _showError('Connection timed out. Please try again.');
     } catch (e) {
       debugPrint('[SignIn] Error: $e');
-      final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('invalid') || errorMessage.contains('password')) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('invalid') || msg.contains('credentials') || msg.contains('password')) {
         _showError('Invalid email or password. Please try again.');
-      } else if (errorMessage.contains('network') || errorMessage.contains('socket')) {
-        _showError('Network error. Please check your internet connection and try again.');
+      } else if (msg.contains('email') && msg.contains('confirm')) {
+        _showError('Please confirm your email before signing in.');
       } else {
-        _showError('Sign in failed. Please check your credentials and try again.');
+        _showError('Sign in failed. Please check your credentials.');
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -127,6 +103,7 @@ class _SignInScreenState extends State<SignInScreen> {
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              onSubmitted: (_) => _handleSignIn(),
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(
@@ -145,21 +122,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  // TODO: Implement password reset via Clerk
-                },
-                child: Text(
-                  'Forgot password?',
-                  style: MasaratTypography.labelMedium.copyWith(
-                    color: MasaratColors.primary,
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: 32),
             _GradientButton(
               label: 'Sign In',
@@ -167,47 +129,12 @@ class _SignInScreenState extends State<SignInScreen> {
               onPressed: _handleSignIn,
             ),
             const SizedBox(height: 32),
-            Row(
-              children: [
-                const Expanded(child: Divider(thickness: 1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'or continue with',
-                    style: MasaratTypography.labelSmall,
-                  ),
-                ),
-                const Expanded(child: Divider(thickness: 1)),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _SocialButton(
-                    icon: Icons.g_mobiledata_rounded,
-                    label: 'Google',
-                    onPressed: () {
-                      // TODO: Implement Google OAuth via Clerk
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _SocialButton(
-                    icon: Icons.apple,
-                    label: 'Apple',
-                    onPressed: () {
-                      // TODO: Implement Apple OAuth via Clerk
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
             Center(
               child: GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                ),
                 child: RichText(
                   text: TextSpan(
                     style: MasaratTypography.bodyMedium,
@@ -278,39 +205,6 @@ class _GradientButton extends StatelessWidget {
                   ),
                 )
               : Text(label, style: MasaratTypography.buttonText),
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: MasaratColors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: MasaratColors.onSurface, size: 22),
-            const SizedBox(width: 8),
-            Text(label, style: MasaratTypography.labelLarge),
-          ],
         ),
       ),
     );

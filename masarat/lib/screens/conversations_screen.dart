@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/supabase_service.dart';
-import '../services/clerk_auth_service.dart';
+import '../services/auth_service.dart';
 import '../models/message_model.dart';
 import '../screens/welcome_screen.dart';
 import 'chat_screen.dart';
@@ -12,7 +12,7 @@ class ConversationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = ClerkAuthService.userId;
+    final userId = AuthService.userId;
 
     return Scaffold(
       backgroundColor: MasaratColors.surface,

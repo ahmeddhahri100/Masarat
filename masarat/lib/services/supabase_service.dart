@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
-import 'clerk_auth_service.dart';
 
 class SupabaseService {
   static const String _supabaseUrl =
@@ -34,7 +33,7 @@ class SupabaseService {
       _client = Supabase.instance.client;
       _isInitialized = true;
       _initializationError = null;
-      debugPrint('[Supabase] Initialized successfully (DB only, auth via Clerk)');
+      debugPrint('[Supabase] Initialized successfully');
     } catch (e, stackTrace) {
       _isInitialized = false;
       _initializationError = e.toString();
@@ -55,40 +54,17 @@ class SupabaseService {
   }
 
   static SupabaseClient getAuthenticatedClient() {
-    if (!ClerkAuthService.isSignedIn) {
-      throw StateError(
-        'Cannot create authenticated Supabase client: user is not signed in via Clerk.',
-      );
+    if (client.auth.currentSession == null) {
+      throw StateError('User is not signed in.');
     }
-
-    return SupabaseClient(
-      _supabaseUrl,
-      _anonKey,
-      headers: {
-        'Authorization': 'Bearer ${ClerkAuthService.getToken()}',
-      },
-    );
+    return client;
   }
 
   static Future<SupabaseClient> getAuthenticatedClientAsync() async {
-    if (!ClerkAuthService.isSignedIn) {
-      throw StateError(
-        'Cannot create authenticated Supabase client: user is not signed in via Clerk.',
-      );
+    if (client.auth.currentSession == null) {
+      throw StateError('User is not signed in.');
     }
-
-    final token = await ClerkAuthService.getToken();
-    if (token == null) {
-      throw StateError('Failed to retrieve Clerk session token.');
-    }
-
-    return SupabaseClient(
-      _supabaseUrl,
-      _anonKey,
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+    return client;
   }
 
   // Trips
