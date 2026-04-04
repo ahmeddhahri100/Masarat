@@ -11,7 +11,7 @@ import 'screens/welcome_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  GoogleFonts.config.allowRuntimeFetching = false;
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   try {
     debugPrint('[Main] Initializing Supabase...');
