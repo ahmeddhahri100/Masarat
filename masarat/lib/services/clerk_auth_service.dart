@@ -2,7 +2,7 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 class ClerkAuthService {
-  static const String _publishableKey = 'YOUR_CLERK_PUBLISHABLE_KEY';
+  static const String _publishableKey = 'pk_test_ZW5nYWdpbmctbG9ic3Rlci0zNS5jbGVyay5hY2NvdW50cy5kZXYk';
   static const String _placeholderKey = 'YOUR_CLERK_PUBLISHABLE_KEY';
 
   static bool get isConfigured =>
