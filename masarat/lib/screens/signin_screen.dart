@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/auth_service.dart';
+import 'home_screen.dart';
 import 'signup_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -30,7 +31,14 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await AuthService.signIn(email: email, password: password);
+      final response = await AuthService.signIn(email: email, password: password);
+      if (response.session != null && mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+        return;
+      }
     } on TimeoutException {
       _showError('Connection timed out. Please try again.');
     } catch (e) {

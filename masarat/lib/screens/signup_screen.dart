@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
 import '../services/auth_service.dart';
+import 'home_screen.dart';
 import 'signin_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -49,16 +50,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (!mounted) return;
 
-      if (response.user != null && response.session == null) {
+      if (response.session != null && mounted) {
+        // Email confirmation not required — go straight to the app
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else if (response.user != null && response.session == null) {
+        // Email confirmation required
         _showInfo(
           'Account created! Please check your email to confirm your account, then sign in.',
           isSuccess: true,
         );
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const SignInScreen()),
+            (route) => false,
           );
         }
       }
