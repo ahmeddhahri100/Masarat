@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
+import 'auth_service.dart';
 
 class SupabaseService {
   static const String _supabaseUrl =
@@ -54,16 +55,21 @@ class SupabaseService {
   }
 
   static SupabaseClient getAuthenticatedClient() {
-    if (client.auth.currentSession == null) {
-      throw StateError('User is not signed in.');
-    }
     return client;
   }
 
   static Future<SupabaseClient> getAuthenticatedClientAsync() async {
-    if (client.auth.currentSession == null) {
-      throw StateError('User is not signed in.');
+    // Try to get a Clerk JWT for Supabase (requires 'supabase' JWT template in Clerk dashboard)
+    final token = await AuthService.sessionToken(templateName: 'supabase');
+    if (token != null) {
+      debugPrint('[Supabase] Using Clerk JWT for authenticated request');
+      return SupabaseClient(
+        _supabaseUrl,
+        _anonKey,
+        headers: {'Authorization': 'Bearer $token'},
+      );
     }
+    debugPrint('[Supabase] Using anon key for request');
     return client;
   }
 

@@ -1,7 +1,8 @@
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
-import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signin_screen.dart';
 
@@ -42,24 +43,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await AuthService.signUp(
-        email: email,
+      final auth = ClerkAuth.of(context, listen: false);
+      final nameParts = name.split(' ');
+      final firstName = nameParts.first;
+      final lastName =
+          nameParts.length > 1 ? nameParts.skip(1).join(' ') : null;
+
+      await auth.attemptSignUp(
+        strategy: clerk.Strategy.emailCode,
+        emailAddress: email,
         password: password,
-        fullName: name,
+        passwordConfirmation: password,
+        firstName: firstName,
+        lastName: lastName,
       );
 
       if (!mounted) return;
 
-      if (response.session != null && mounted) {
-        // Email confirmation not required — go straight to the app
+      if (auth.isSignedIn) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
           (route) => false,
         );
-      } else if (response.user != null && response.session == null) {
-        // Email confirmation required
+      } else {
+        // Email verification likely required
         _showInfo(
-          'Account created! Please check your email to confirm your account, then sign in.',
+          'Account created! Please check your email to verify, then sign in.',
           isSuccess: true,
         );
         await Future.delayed(const Duration(seconds: 2));
@@ -72,16 +81,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } catch (e) {
       debugPrint('[SignUp] Error: $e');
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('already') || msg.contains('exists') || msg.contains('registered')) {
-        _showError('An account with this email already exists. Please sign in.');
-      } else if (msg.contains('password')) {
-        _showError('Password must be at least 6 characters long.');
-      } else if (msg.contains('email')) {
-        _showError('Please enter a valid email address.');
-      } else {
-        _showError('Sign up failed. Please try again.');
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
