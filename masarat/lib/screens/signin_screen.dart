@@ -1,8 +1,8 @@
-import 'dart:async';
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../core/theme/typography.dart';
-import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 
@@ -31,26 +31,24 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await AuthService.signIn(email: email, password: password);
-      if (response.session != null && mounted) {
+      final auth = ClerkAuth.of(context, listen: false);
+      await auth.attemptSignIn(
+        strategy: clerk.Strategy.password,
+        identifier: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      if (auth.isSignedIn) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
           (route) => false,
         );
-        return;
       }
-    } on TimeoutException {
-      _showError('Connection timed out. Please try again.');
     } catch (e) {
       debugPrint('[SignIn] Error: $e');
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('invalid') || msg.contains('credentials') || msg.contains('password')) {
-        _showError('Invalid email or password. Please try again.');
-      } else if (msg.contains('email') && msg.contains('confirm')) {
-        _showError('Please confirm your email before signing in.');
-      } else {
-        _showError('Sign in failed. Please check your credentials.');
-      }
+      if (mounted) _showError('Sign in failed. Please check your credentials.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

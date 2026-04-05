@@ -1,12 +1,15 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
 import 'services/auth_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
+
+const _clerkPublishableKey =
+    'pk_test_ZW5nYWdpbmctbG9ic3Rlci0zNS5jbGVyay5hY2NvdW50cy5kZXYk';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,40 +36,23 @@ class MasaratApp extends StatelessWidget {
       title: 'Masarat',
       debugShowCheckedModeBanner: false,
       theme: MasaratTheme.lightTheme,
+      builder: ClerkAuth.materialAppBuilder(
+        config: ClerkAuthConfig(
+          publishableKey: _clerkPublishableKey,
+        ),
+      ),
       home: const _AuthGate(),
     );
   }
 }
 
-class _AuthGate extends StatefulWidget {
+class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
   @override
-  State<_AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<_AuthGate> {
-  bool _isSignedIn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _isSignedIn = AuthService.isSignedIn;
-
-    AuthService.authStateChanges.listen((AuthState state) {
-      if (mounted) {
-        setState(() {
-          _isSignedIn = state.session != null;
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_isSignedIn) {
-      return const HomeScreen();
-    }
-    return const WelcomeScreen();
+    final auth = ClerkAuth.of(context);
+    AuthService.update(auth);
+    return auth.isSignedIn ? const HomeScreen() : const WelcomeScreen();
   }
 }
