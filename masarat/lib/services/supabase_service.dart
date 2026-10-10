@@ -1,15 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/env.dart';
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
 import 'auth_service.dart';
 
 class SupabaseService {
-  static const String _supabaseUrl =
-      'https://YOUR_PROJECT.supabase.co';
-  static const String _anonKey =
-      'YOUR_SUPABASE_ANON_KEY';
+  static const String _supabaseUrl = Env.supabaseUrl;
+  static const String _anonKey = Env.supabaseAnonKey;
 
   static bool _isInitialized = false;
   static String? _initializationError;
@@ -19,6 +18,12 @@ class SupabaseService {
   static String? get initializationError => _initializationError;
 
   static Future<void> initialize() async {
+    if (!Env.isConfigured) {
+      throw StateError(
+        'Missing --dart-define keys: SUPABASE_URL, SUPABASE_ANON_KEY, '
+        'CLERK_PUBLISHABLE_KEY. See .env.example.',
+      );
+    }
     try {
       debugPrint('[Supabase] Initializing with URL: $_supabaseUrl');
 

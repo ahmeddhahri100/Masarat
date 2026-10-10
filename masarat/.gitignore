@@ -4,6 +4,10 @@
 *.pyc
 *.swp
 .DS_Store
+# Local secrets — never commit real keys (see .env.example)
+.env
+.env.local
+*.env
 .atom/
 .build/
 .buildlog/
