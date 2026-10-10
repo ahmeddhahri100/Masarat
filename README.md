@@ -1,4 +1,6 @@
-# Masarat — Shared Journeys, Trusted Community
+# 🇹🇳 Masarat — Tunisia's First Community Trip-Sharing Mobile App
+
+> Shared Journeys, Trusted Community.
 
 > A cross-platform trip-sharing / carpooling community app built with **Flutter**, focused on Tunisia. Coordinate trips with your community — not a taxi app.
 
