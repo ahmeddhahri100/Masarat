@@ -1,8 +1,9 @@
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
+import '../../core/config/env.dart';
 
 class ClerkAuthService {
-  static const String _publishableKey = 'pk_test_YOUR_CLERK_PUBLISHABLE_KEY';
+  static const String _publishableKey = Env.clerkPublishableKey;
   static const String _placeholderKey = 'YOUR_CLERK_PUBLISHABLE_KEY';
 
   static bool get isConfigured =>

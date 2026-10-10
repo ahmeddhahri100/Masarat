@@ -2,14 +2,14 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'core/config/env.dart';
 import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
 import 'services/auth_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 
-const _clerkPublishableKey =
-    'pk_test_YOUR_CLERK_PUBLISHABLE_KEY';
+const _clerkPublishableKey = Env.clerkPublishableKey;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
