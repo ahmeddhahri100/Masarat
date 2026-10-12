@@ -7,7 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'services/supabase_service.dart';
 import 'services/auth_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/welcome_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 const _clerkPublishableKey = Env.clerkPublishableKey;
 
@@ -53,6 +53,6 @@ class _AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = ClerkAuth.of(context);
     AuthService.update(auth);
-    return auth.isSignedIn ? const HomeScreen() : const WelcomeScreen();
+    return auth.isSignedIn ? const HomeScreen() : const OnboardingScreen();
   }
 }
