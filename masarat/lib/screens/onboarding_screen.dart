@@ -540,7 +540,10 @@ class _ActionFooter extends StatelessWidget {
               if (currentPage < 2) {
                 onNext();
               } else {
-                Navigator.of(context).pushReplacement(
+                // NB: push (not pushReplacement) so the system back button
+                // and the in-app back arrow return to onboarding instead
+                // of popping an empty stack (black screen).
+                Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SignUpScreen()),
                 );
               }

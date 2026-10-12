@@ -32,6 +32,22 @@ class MasaratApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Demo mode: no backend keys (e.g. plain `flutter run` without
+    // --dart-define). Skip Clerk wrapper — an empty publishable key throws
+    // FormatException and red-screens. See .env.example / .dart-define.json.
+    if (!Env.isConfigured) {
+      return MaterialApp(
+        title: 'Masarat',
+        debugShowCheckedModeBanner: false,
+        theme: MasaratTheme.lightTheme,
+        builder: (context, child) => Banner(
+          message: 'DEMO — no keys',
+          location: BannerLocation.topEnd,
+          child: child ?? const OnboardingScreen(),
+        ),
+        home: const OnboardingScreen(),
+      );
+    }
     return MaterialApp(
       title: 'Masarat',
       debugShowCheckedModeBanner: false,
