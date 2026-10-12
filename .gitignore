@@ -1,7 +1,0 @@
-# Local-only helpers — kept on dev machines, never committed.
-# (Restored locally after removal from the repo; see .git/info/exclude backup.)
-.replit
-opencode.json
-replit.md
-replit.nix
-serve.py
