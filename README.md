@@ -10,7 +10,6 @@
 [![Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF?logo=clerk&logoColor=white)](https://clerk.com)
 [![Riverpod](https://img.shields.io/badge/State-Riverpod-6524FF)](https://riverpod.dev)
 
-Live demo: Flutter Web build served from `masarat/build/web` (see Deployment).
 Repo: `git@github.com:ahmeddhahri100/Masarat.git`
 
 ## ✨ What it does
@@ -22,49 +21,48 @@ Repo: `git@github.com:ahmeddhahri100/Masarat.git`
 * **Chat to coordinate** — per-trip realtime messaging + conversations list (`chat_screen.dart`, `conversations_screen.dart`, Supabase `messages` stream)
 * **Profiles** — view/edit profile, my trips (`profile_screen.dart`, `edit_profile_screen.dart`, `my_trips_screen.dart`, Supabase `profiles` table)
 * **Boost / Premium** — boosted trip listing + premium upsell screens (`boost_trip_screen.dart`, `premium_screen.dart`, `featured_trip_card.dart`)
-* **Onboarding + Auth gate** — welcome → onboarding → sign-in/sign-up → home (`welcome_screen.dart`, `onboarding_screen.dart`, `main.dart:_AuthGate`)
+* **Onboarding + Auth** — 3-slide animated onboarding → 2-step sign-up (account + profile setup + email-code verification) / sign-in → home (`onboarding_screen.dart`, `signup_screen.dart`, `signin_screen.dart`, `main.dart:_AuthGate`)
 * **Notifications / Settings** — notifications list, settings (`notifications_screen.dart`, `settings_screen.dart`)
 
 ## 🧰 Tech stack
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Framework | Flutter 3.32 / Dart `>=3.0.0 <4.0.0` | `masarat/pubspec.yaml`, `version: 1.0.0+1` |
+| Framework | Flutter 3.32+ / Dart `>=3.0.0 <4.0.0` | `masarat/pubspec.yaml`, `version: 1.0.0+1` |
 | State | `flutter_riverpod ^3.3.1` | `ProviderScope` in `main.dart` |
 | Backend / DB / Realtime | `supabase_flutter ^2.12.0` | `SupabaseService` — trips / profiles / messages streams |
-| Auth | Clerk (`clerk_flutter`) + Supabase Auth | Active gate is Clerk in `main.dart`; `AuthService` + `clerk_auth_service.dart`; Supabase email/password path kept as fallback |
-| UI | `google_fonts ^6.3.2`, `lucide_icons`, `flutter_svg ^2.0.10+1`, Material | Theme in `core/theme/` |
+| Auth | Clerk (`clerk_flutter`) | Active gate is Clerk in `main.dart`; `AuthService` + `clerk_auth_service.dart`; password sign-up with email-code verification |
+| UI | `google_fonts ^6.3.2`, `lucide_icons`, `flutter_svg ^2.0.10+1`, Material | Editorial "Curated Journey" design system in `core/theme/` (Stitch) |
 | Utils | `intl`, `uuid`, `path_provider`, `cupertino_icons` | Formatting, IDs, storage |
-| Web preview | `serve.py` (Python `http.server`, port 5000) | Serves `masarat/build/web` |
 
 ## 📁 Project structure
 
 ```text
 .
 ├── README.md                  # ← you are here (repo overview)
-├── replit.md                  # Replit agent notes / dev setup history
-├── serve.py                   # Static server for Flutter web build (port 5000)
-├── .replit                    # Replit workflow config
 └── masarat/                   # Flutter project root
     ├── lib/
-    │   ├── main.dart          # Supabase init + Clerk gate → Home / Welcome
+    │   ├── main.dart          # Supabase init + Clerk gate → Home / Onboarding
+    │   ├── core/config/env.dart       # --dart-define keys (never hardcoded)
     │   ├── core/constants/app_strings.dart
     │   ├── core/theme/        # colors, typography, app_theme
     │   ├── components/        # trip_card, featured_trip_card, status_chip, limit_reached_modal
     │   ├── models/            # trip_model, user_model, message_model
-    │   ├── screens/           # 17 screens (home, search, create, chat, profile, premium…)
+    │   ├── screens/           # 18 screens (onboarding, signup, signin, home, search, create, chat, profile…)
     │   └── services/          # supabase_service, auth_service, clerk_auth_service
     ├── supabase_clerk_rls_policies.sql  # RLS policies for Clerk JWT (sub claim)
+    ├── .env.example           # Key names template (no real values)
+    ├── .dart-define.json      # Local keys (git-ignored, never committed)
     ├── pubspec.yaml
     ├── web/                   # Flutter web entry
-    └── build/web/             # Release build output (served, git-ignored ideally)
+    └── build/web/             # Release build output (git-ignored)
 ```
 
 ## 🚀 Getting started
 
 ### Prerequisites
 
-* Flutter 3.32.0 (Dart 3.8.0) — `flutter --version`
+* Flutter stable (tested with 3.47, Dart 3.13) — `flutter --version`
 * Supabase project + Clerk application
 
 ### 1. Clone & install
@@ -88,31 +86,39 @@ Run the RLS script in Supabase SQL Editor:
 # - public read on trips, owner-only write on profiles
 ```
 
-> ⚠️ **Security — action required:** Supabase URL/anon-key are currently hardcoded in `masarat/lib/services/supabase_service.dart:9-12` and the Clerk publishable key in `masarat/lib/main.dart:11-12`. Rotate those keys and move them to `--dart-define` / `--dart-define-from-file` or a git-ignored `.env` before any public release. Never commit service-role keys.
-
-Example (recommended):
+Keys are passed at build/run time with `--dart-define` (see `core/config/env.dart`, never hardcoded). Copy the template and fill in your values:
 
 ```bash
-flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=CLERK_KEY=...
+# masarat/.dart-define.json (git-ignored — never commit real keys)
+{
+  "SUPABASE_URL": "https://xyzcompany.supabase.co",
+  "SUPABASE_ANON_KEY": "eyJ...",
+  "CLERK_PUBLISHABLE_KEY": "pk_test_..."
+}
 ```
+
+> ⚠️ **Security:** never commit real keys. Past keys visible in git history should be rotated in the Supabase/Clerk dashboards. Never commit service-role keys.
 
 ### 3. Run
 
 ```bash
 cd masarat
-flutter run -d chrome        # web
-flutter run                  # connected device / emulator
+flutter run -d emulator-5554 --dart-define-from-file=.dart-define.json  # Android emulator
+flutter run -d chrome --dart-define-from-file=.dart-define.json         # web
 ```
 
-### 4. Web preview / deployment
+Without keys the app starts in demo mode (onboarding UI with a "DEMO — no keys" banner); Clerk sign-up/sign-in requires the keys above.
+
+Auth flow: onboarding → sign-up (Step 1 account + role → Step 2 profile → email-code verification) or sign-in → home. Back navigation always returns to onboarding (no dead-ends).
+
+### 4. Web deployment
 
 ```bash
-cd masarat && flutter build web --release
-cd .. && python3 serve.py
-# → http://0.0.0.0:5000 serving masarat/build/web
+cd masarat && flutter build web --release \
+  --dart-define-from-file=.dart-define.json
 ```
 
-Static hosts: publish `masarat/build/web` as-is (Replit static deployment uses build `flutter build web --release`, public dir `masarat/build/web`).
+Publish `masarat/build/web` as-is on any static host.
 
 ## 📸 Screenshots
 
@@ -120,7 +126,9 @@ No screenshots committed yet. Suggested: `docs/screenshots/home.png`, `search.pn
 
 ## 🗺️ Roadmap
 
-* [ ] Move secrets to env / dart-define + rotate exposed keys
+* [x] Move secrets to env / dart-define (keys no longer hardcoded)
+* [ ] Rotate keys exposed in git history
+* [ ] Persist sign-up profile data (role / hometown / phone) to Supabase `profiles`
 * [ ] Seat-request accept/decline flow + push notifications
 * [ ] Trip ratings / trust badges
 * [ ] Arabic + French localization (currently English strings in `app_strings.dart`)
@@ -140,4 +148,4 @@ PRs welcome. Run `flutter analyze` and `flutter test` before opening a PR. For l
 
 ## 📄 License
 
-No license file yet — add `LICENSE` (MIT recommended) if you want open-source contributions. 
+No license file yet — add `LICENSE` (MIT recommended) if you want open-source contributions.
